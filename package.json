@@ -1,0 +1,9 @@
+{
+  "name": "voice-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js",
+    "test": "node --test prototype/js/judge.test.js"
+  }
+}

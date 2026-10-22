@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>音声入力ゲーム 試作</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<button id="btn-debug" class="gear" aria-label="デバッグ設定">⚙</button>
+
+<!-- タイトル -->
+<section class="screen active" id="screen-title">
+  <h1 class="title">音声入力ゲーム<br><span>試作 v1</span></h1>
+  <div class="window notice" id="support-note">このゲームはマイクを使います。はじめると、ブラウザがマイクの許可を求めます。</div>
+  <button class="btn big" id="btn-start">はじめる</button>
+</section>
+
+<!-- 地球と矢 -->
+<section class="screen" id="screen-earth">
+  <div class="window">どこで生まれるかは、矢にまかせましょう。</div>
+  <div class="space">
+    <div class="globe"><div class="land l1"></div><div class="land l2"></div><div class="land l3"></div></div>
+    <div class="arrow" id="arrow">➤</div>
+  </div>
+  <button class="btn big" id="btn-arrow">矢を放つ</button>
+</section>
+
+<!-- 誕生 -->
+<section class="screen" id="screen-birth">
+  <div class="window big-text" id="birth-text"></div>
+  <button class="btn big" id="btn-birth-next">▼ つぎへ</button>
+</section>
+
+<!-- 1歳（会話・入力・結果を同じ画面で切り替える） -->
+<section class="screen" id="screen-age1" data-mode="talk">
+  <div class="window status"><span>1歳</span><span>イベント 1／20</span></div>
+  <div class="stage">
+    <div class="parents" id="parents">
+      <div class="parent" id="parent-papa"><span class="mark"></span><div class="sprite"></div></div>
+      <div class="parent" id="parent-mama"><span class="mark"></span><div class="sprite"></div></div>
+    </div>
+    <div class="window dialogue" id="dialogue">　</div>
+  </div>
+  <div class="window bottom">
+    <div class="mode-talk">
+      <p class="situation" id="situation"></p>
+      <button class="btn big" id="btn-mic">▶ まねして言う（3秒）</button>
+    </div>
+    <div class="mode-input">
+      <p id="input-phase">マイクを準備中…</p>
+      <div id="countdown">
+        <div class="bar"><div class="fill" id="bar-fill"></div></div>
+        <p class="small">のこり <span id="remain">3.0</span> 秒</p>
+      </div>
+      <div class="text-input" id="text-input" hidden>
+        <input id="text-field" type="text" placeholder="認識結果の代わりに入力" autocomplete="off">
+        <button class="btn" id="btn-text-judge">判定</button>
+      </div>
+    </div>
+    <div class="mode-result">
+      <div id="result-lines"></div>
+      <pre id="raw-info" class="raw"></pre>
+      <div id="self-report" class="report">
+        <p>言ったつもりの言葉にチェックしてください（判定率を出すために使います）</p>
+        <div id="self-report-options"></div>
+        <button class="btn big" id="btn-save">記録する</button>
+      </div>
+      <div id="after-buttons" hidden>
+        <p class="small" id="saved-note"></p>
+        <button class="btn big" id="btn-again">もう一度（別の人生）</button>
+        <button class="btn" id="btn-title">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- デバッグ設定（本番では消す） -->
+<div class="overlay" id="debug-panel" hidden>
+  <div class="window">
+    <h2>デバッグ設定</h2>
+    <p class="small" id="dbg-support"></p>
+    <div class="row">
+      <label>生まれる国<br>
+        <select id="dbg-country">
+          <option value="random">ランダム</option>
+          <option value="jp">日本</option>
+          <option value="us">アメリカ</option>
+          <option value="es">スペイン</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">認識の方式<br>
+      <label><input type="radio" name="dbg-plan" value="A"> Plan A（ja-JP固定。カタカナで照合）</label><br>
+      <label><input type="radio" name="dbg-plan" value="B"> Plan B（その国の言語で認識）</label>
+    </div>
+    <div class="row"><label>テスター名<br><input type="text" id="dbg-tester" placeholder="任意"></label></div>
+    <div class="row"><label><input type="checkbox" id="dbg-showraw"> 結果画面に認識結果を出す</label></div>
+    <div class="row"><label><input type="checkbox" id="dbg-textinput"> マイクの代わりにテキストで入力する（判定の確認用）</label></div>
+    <h2>記録 <span id="dbg-count" class="small"></span></h2>
+    <div class="row">
+      <button class="btn" id="dbg-copy">TSVをコピー</button>
+      <button class="btn" id="dbg-download-tsv">TSVを保存</button>
+      <button class="btn" id="dbg-download">JSONを保存</button>
+      <button class="btn" id="dbg-clear">消去</button>
+    </div>
+    <p class="small" id="dbg-msg"></p>
+    <textarea id="dbg-tsv" readonly></textarea>
+    <div class="row"><button class="btn big" id="btn-debug-close">閉じる</button></div>
+  </div>
+</div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+/* ファミコンRPG風。スマホ縦を基本に、幅480pxで中央寄せ */
+:root {
+  --fg: #fff;
+  --bg: #000;
+  --accent: #ffd34d;
+  --dim: #9aa;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'DotGothic16', 'MS Gothic', 'Osaka-Mono', monospace;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+[hidden] { display: none !important; }
+
+.screen {
+  display: none;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 52px 12px 24px; /* 上は⚙ボタンのぶん空ける */
+  flex-direction: column;
+  gap: 14px;
+}
+.screen.active { display: flex; }
+
+/* 白の二重枠 */
+.window {
+  border: 3px solid var(--fg);
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--fg);
+  background: var(--bg);
+  padding: 12px 14px;
+  margin: 5px;
+}
+.btn {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 3px solid var(--fg);
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--fg);
+  padding: 10px 16px;
+  margin: 5px;
+  cursor: pointer;
+}
+.btn:active { background: var(--fg); color: var(--bg); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.big { font-size: 20px; padding: 14px 20px; width: calc(100% - 10px); display: block; }
+
+.gear {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--fg);
+  background: var(--bg);
+  border: 2px solid var(--fg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.small { font-size: 12px; color: var(--dim); }
+.title { text-align: center; font-size: 28px; line-height: 1.3; margin: 24px 0 10px; }
+.title span { font-size: 14px; color: var(--dim); }
+.notice.warn { color: var(--accent); }
+.big-text { font-size: 22px; text-align: center; padding: 28px 14px; margin-top: 80px; }
+
+/* 地球と矢 */
+.space {
+  position: relative;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.globe {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: #1b5fd6;
+  border: 3px solid var(--fg);
+  overflow: hidden;
+}
+.land {
+  position: absolute;
+  background: #3ca84a;
+  border-radius: 40%;
+  animation: drift 3s linear infinite;
+}
+.land.l1 { width: 70px; height: 50px; top: 30px; animation-delay: 0s; }
+.land.l2 { width: 50px; height: 60px; top: 85px; animation-delay: -1s; }
+.land.l3 { width: 40px; height: 30px; top: 5px; animation-delay: -2s; }
+@keyframes drift { from { left: 160px; } to { left: -80px; } }
+.globe.hit { animation: shake .5s; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.arrow {
+  position: absolute;
+  left: 6%;
+  bottom: 6%;
+  font-size: 40px;
+  line-height: 1;
+  opacity: 0;
+  transform: rotate(-45deg);
+}
+.arrow.fly { animation: fly .7s ease-in forwards; }
+@keyframes fly {
+  0% { opacity: 1; left: 6%; bottom: 6%; }
+  100% { opacity: 1; left: 46%; bottom: 46%; }
+}
+
+/* 1歳 */
+.status { display: flex; justify-content: space-between; font-size: 15px; padding: 8px 14px; }
+.stage { display: flex; flex-direction: column; gap: 10px; }
+.parents {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 28px;
+  min-height: 150px;
+  padding: 30px 0 6px;
+}
+.parent { position: relative; display: flex; flex-direction: column; align-items: center; }
+.parent .sprite svg { display: block; }
+.parent .mark {
+  position: absolute;
+  top: -30px;
+  font-size: 24px;
+  color: var(--accent);
+  opacity: 0;
+}
+.parent.talking .sprite { animation: talk .5s steps(2) infinite; }
+@keyframes talk { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+
+.parents.reaction-surprised .sprite { animation: jump .5s ease-out 3; }
+@keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
+.parents.reaction-happy .sprite { animation: bounce .4s ease-in-out 4; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.parents.reaction-puzzled .sprite { animation: tilt 1.2s ease-in-out 2; transform-origin: 50% 90%; }
+@keyframes tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(12deg); } }
+.parents.reaction-creeped .sprite { animation: shiver .15s linear 8; filter: saturate(.3); }
+@keyframes shiver { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+.parents[class*="reaction-"] .mark { opacity: 1; animation: pop .3s ease-out; }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+.dialogue { min-height: 60px; font-size: 18px; }
+.mode-talk, .mode-input, .mode-result { display: none; }
+#screen-age1[data-mode="talk"] .mode-talk { display: block; }
+#screen-age1[data-mode="input"] .mode-input { display: block; }
+#screen-age1[data-mode="result"] .mode-result { display: block; }
+.situation { margin: 0 0 10px; }
+
+.bar { height: 14px; border: 2px solid var(--fg); margin: 8px 0 4px; }
+.fill { height: 100%; width: 100%; background: var(--fg); transition: width .1s linear; }
+.text-input { display: flex; gap: 6px; align-items: center; }
+.text-input input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  background: #111;
+  color: var(--fg);
+  border: 2px solid var(--fg);
+  padding: 8px;
+}
+
+#result-lines p { margin: 0 0 10px; }
+#result-lines .points { color: var(--accent); font-size: 18px; }
+#result-lines .invite { color: var(--accent); font-size: 20px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+.raw {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font: inherit;
+  font-size: 12px;
+  color: #9ad;
+  border-top: 1px dashed #666;
+  margin: 10px 0 0;
+  padding-top: 8px;
+}
+.raw:empty { display: none; }
+.report p { margin: 10px 0 6px; font-size: 14px; }
+.report label { display: block; margin: 4px 0; }
+
+/* デバッグ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: auto;
+  background: rgba(0, 0, 0, .94);
+  padding: 16px 12px 40px;
+}
+.overlay .window { max-width: 480px; margin: 36px auto; }
+.overlay h2 { font-size: 18px; margin: 14px 0 8px; }
+.overlay .row { margin: 8px 0; }
+.overlay select,
+.overlay input[type="text"],
+.overlay textarea {
+  font: inherit;
+  font-size: 14px;
+  background: #111;
+  color: var(--fg);
+  border: 2px solid var(--fg);
+  padding: 6px;
+  width: 100%;
+}
+.overlay textarea { height: 140px; white-space: pre; }
+.overlay .btn { font-size: 14px; padding: 6px 10px; }
