@@ -24,6 +24,10 @@ npm test
 - 結果画面に認識結果を出す／マイクの代わりにテキストで入力する（判定の確認用）
 - 記録の表示・TSVコピー・TSV／JSON保存・消去。記録は端末の localStorage に貯まる
 
+## 公開と反映
+
+`git push` で1〜2分後に https://hidemoring.github.io/voice-game/ へ反映される。ただし GitHub Pages は10分間キャッシュされるので、開いたばかりの端末は古いコードのままのことがある。タイトル画面と⚙の「build」番号（`js/data.js` の `BUILD`。push のたびに上げる）で見分け、古ければ10分待つか、Chrome のサイト設定でデータを消去して開き直す。
+
 ## 判定の調整
 
 `js/data.js` の `variants`（核になる語の表記ゆれ）と `fillers`（両親の言葉に含まれる核以外の語）を直す。

@@ -1,6 +1,6 @@
 // 画面遷移と進行。タイトル → 地球（矢） → 誕生 → 1歳（会話 → 入力 → 結果）
 
-import { COUNTRIES, TEXTS, RECORD_SECONDS, REACTION_OF } from './data.js';
+import { COUNTRIES, TEXTS, RECORD_SECONDS, REACTION_OF, BUILD } from './data.js';
 import { judge, recogLang } from './judge.js';
 import * as speech from './speech.js';
 import { parentSVG } from './sprites.js';
@@ -38,6 +38,7 @@ function setMode(mode) {
 
 // ---- タイトル ----
 function initTitle() {
+  $('#build').textContent = `build ${BUILD}`;
   if (!speech.recognitionSupported) {
     $('#support-note').textContent = TEXTS.noRecognition;
     $('#support-note').classList.add('warn');
@@ -300,6 +301,7 @@ function saveRecord() {
   const said = [...document.querySelectorAll('#self-report-options input:checked')].map((x) => x.value);
   addLog({
     time: new Date().toISOString(),
+    build: BUILD,
     tester: s.tester,
     country: c.id,
     lang: c.lang,
@@ -345,7 +347,7 @@ function refreshDebug() {
   const b = browserInfo();
   const mark = (ok) => (ok ? '○' : '×');
   $('#dbg-support').textContent =
-    `${b.label}｜音声認識: ${mark(speech.recognitionSupported)}｜読み上げの声 ja:${mark(v.ja)} en:${mark(v.en)} es:${mark(v.es)}`;
+    `build ${BUILD}｜${b.label}｜音声認識: ${mark(speech.recognitionSupported)}｜読み上げの声 ja:${mark(v.ja)} en:${mark(v.en)} es:${mark(v.es)}`;
   const logs = getLogs();
   $('#dbg-count').textContent = `${logs.length}件`;
   $('#dbg-tsv').value = toTSV(logs);
