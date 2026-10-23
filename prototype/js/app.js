@@ -12,13 +12,22 @@ import {
 const $ = (sel) => document.querySelector(sel);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const MARKS = { surprised: '！？', happy: '♪', puzzled: '？', creeped: '…' };
-// マイクが使えなかったときの説明（判定せず、会話に戻す）
+// マイクが使えなかったときの説明（判定せず、会話に戻す）。iPhone は設定の場所が違う
 const MIC_ERRORS = {
   'not-allowed': 'マイクの使用が許可されていません。アドレスバーの左のアイコンからマイクを許可して、もう一度押してください。Claudeアプリ内のブラウザではマイクが使えないので、Chrome本体で開いてください。',
   'service-not-allowed': 'このブラウザでは音声認識サービスが使えません。Chrome本体で開いてください。',
   'audio-capture': 'マイクが見つかりません。マイクの接続を確認してください。',
   'no-start': '音声認識が始まりませんでした。マイクの許可を確認して、もう一度押してください。',
 };
+const MIC_ERRORS_IOS = {
+  'not-allowed': 'マイクか音声認識が許可されていません。①アドレスバー左のアイコン → Webサイトの設定 → マイクを「許可」 ②iPhoneの設定 → Safari → マイクを「確認」か「許可」 ③設定 → プライバシーとセキュリティ → マイク → Safariをオン ④設定 → 一般 → キーボード → 音声入力をオン。変えたらページを再読み込みしてください。',
+  'service-not-allowed': '音声認識が使えません。iPhoneの設定 → 一般 → キーボード → 「音声入力」をオンにして、ページを再読み込みしてください。',
+  'audio-capture': 'マイクが見つかりません。マイクの接続を確認してください。',
+  'no-start': '音声認識が始まりませんでした。マイクの許可を確認して、もう一度押してください。',
+};
+function micErrorText(error) {
+  return (browserInfo().os === 'iOS' ? MIC_ERRORS_IOS : MIC_ERRORS)[error];
+}
 
 const state = { country: null, plan: 'A', loopToken: 0, loopPaused: false, input: null, result: null };
 const LANG_NAMES = { 'ja-JP': '日本語', 'en-US': '英語', 'es-ES': 'スペイン語' };
@@ -222,7 +231,7 @@ async function startInput() {
 function showMicError(error) {
   $('#countdown').hidden = true;
   $('#input-phase').textContent = 'マイクが使えませんでした';
-  $('#mic-error-text').textContent = `${MIC_ERRORS[error]}（${error}）`;
+  $('#mic-error-text').textContent = `${micErrorText(error)}（${error}）`;
   $('#mic-error').hidden = false;
 }
 // 会話に戻る（両親の声のループを再開）
