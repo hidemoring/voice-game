@@ -31,7 +31,8 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
       clearInterval(tick);
       clearTimeout(stopGuard);
       clearTimeout(startGuard);
-      const list = finals.filter(Boolean);
+      // Android Chrome は空の確定結果を混ぜてくるので除く
+      const list = finals.filter((f) => f && f.transcript.trim());
       const final = list.map((f) => f.transcript).join(' ').trim();
       const transcript = final || interim.trim();
       resolve({
@@ -71,7 +72,9 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
         if (r.isFinal) {
           finals[i] = {
             transcript: r[0].transcript,
-            alternatives: Array.from(r).map((a) => ({ transcript: a.transcript, confidence: a.confidence })),
+            alternatives: Array.from(r)
+              .map((a) => ({ transcript: a.transcript, confidence: a.confidence }))
+              .filter((a) => a.transcript.trim()),
           };
         } else {
           interim += r[0].transcript;

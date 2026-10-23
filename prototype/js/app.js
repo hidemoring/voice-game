@@ -78,9 +78,13 @@ function startAge1() {
   $('#after-buttons').hidden = true;
   $('#self-report').hidden = false;
   $('#btn-mic').disabled = false;
+  $('#btn-mic').textContent = `▶ まねして言う（${recordSeconds()}秒）`;
   setMode('talk');
   show('age1');
   runParentLoop();
+}
+function recordSeconds() {
+  return Number(getSettings().seconds) || RECORD_SECONDS;
 }
 
 function setDialogue(text) {
@@ -137,26 +141,27 @@ async function startInput() {
   }
 
   const lang = recogLang(state.plan, c);
+  const seconds = recordSeconds();
   $('#input-phase').textContent = 'マイクを準備中…';
-  $('#remain').textContent = RECORD_SECONDS.toFixed(1);
+  $('#remain').textContent = seconds.toFixed(1);
   setBar(1);
   const raw = await speech.listen({
     lang,
-    seconds: RECORD_SECONDS,
+    seconds,
     onPhase: (ph) => {
       if (ph === 'listening') $('#input-phase').textContent = '言ってみよう！';
       if (ph === 'judging') $('#input-phase').textContent = '判定中…';
     },
     onTick: (remain) => {
       $('#remain').textContent = remain.toFixed(1);
-      setBar(remain / RECORD_SECONDS);
+      setBar(remain / seconds);
     },
   });
   if (MIC_ERRORS[raw.error]) {
     showMicError(raw.error);
     return;
   }
-  finishInput(raw.transcript, { ...raw, recogLang: lang, method: 'mic' });
+  finishInput(raw.transcript, { ...raw, recogLang: lang, method: 'mic', seconds });
 }
 function showMicError(error) {
   $('#countdown').hidden = true;
@@ -174,7 +179,7 @@ function submitText() {
   const t = $('#text-field').value;
   finishInput(t, {
     transcript: t, finals: [], interim: '', usedInterim: false, error: null, durationMs: 0,
-    recogLang: recogLang(state.plan, state.country), method: 'text',
+    recogLang: recogLang(state.plan, state.country), method: 'text', seconds: recordSeconds(),
   });
 }
 function finishInput(transcript, raw) {
@@ -273,6 +278,7 @@ function saveRecord() {
     plan: state.plan,
     recogLang: i.recogLang,
     method: i.method,
+    seconds: i.seconds,
     browser: b.label,
     ua: b.ua,
     transcript: r.transcript,
@@ -304,6 +310,7 @@ function refreshDebug() {
   $('#dbg-country').value = s.country;
   document.querySelector(`input[name="dbg-plan"][value="${s.plan}"]`).checked = true;
   $('#dbg-tester').value = s.tester;
+  $('#dbg-seconds').value = String(s.seconds);
   $('#dbg-showraw').checked = s.showRaw;
   $('#dbg-textinput').checked = s.textInput;
   const v = speech.voiceStatus();
@@ -328,6 +335,10 @@ function initDebug() {
     r.addEventListener('change', (e) => saveSettings({ plan: e.target.value }));
   });
   $('#dbg-tester').addEventListener('input', (e) => saveSettings({ tester: e.target.value.trim() }));
+  $('#dbg-seconds').addEventListener('change', (e) => {
+    saveSettings({ seconds: Number(e.target.value) });
+    $('#btn-mic').textContent = `▶ まねして言う（${recordSeconds()}秒）`;
+  });
   $('#dbg-showraw').addEventListener('change', (e) => saveSettings({ showRaw: e.target.checked }));
   $('#dbg-textinput').addEventListener('change', (e) => saveSettings({ textInput: e.target.checked }));
   $('#dbg-copy').addEventListener('click', async () => {

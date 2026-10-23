@@ -18,16 +18,21 @@ export const POINTS = {
 // 正規化後にこれ以上の文字が残ったら「余計な語あり」。1文字の聞き違いは見逃す
 export const EXTRA_MIN_LENGTH = 2;
 
+// 言葉全体の近似照合で許す文字違いの数 = floor(言葉の長さ / FUZZY_RATIO)
+// 例：「イツパパ」（4文字）なら1文字違いまで、「ユアソキュト」（6文字）なら2文字違いまで
+export const FUZZY_RATIO = 3;
+
 export const COUNTRIES = {
   jp: {
     id: 'jp',
     name: '日本',
     lang: 'ja-JP',
     colors: { skin: '#f3c9a0', hair: '#222222', papa: '#2b5fb3', mama: '#d64a6a' },
+    // ja は Plan A（ja-JPで認識）のときに期待するカタカナ。言葉全体の近似照合に使う
     phrases: [
-      { key: 'papa', text: 'パパですよー', speaker: 'papa' },
-      { key: 'mama', text: 'ママですよー', speaker: 'mama' },
-      { key: 'cute', text: 'かわいいねー', speaker: 'both' },
+      { key: 'papa', text: 'パパですよー', ja: 'パパですよ', speaker: 'papa' },
+      { key: 'mama', text: 'ママですよー', ja: 'ママですよ', speaker: 'mama' },
+      { key: 'cute', text: 'かわいいねー', ja: 'かわいいね', speaker: 'both' },
     ],
     // 自己申告チェックと結果画面に出す語
     coreLabels: { papa: 'パパ', mama: 'ママ', cute: 'かわいい' },
@@ -58,9 +63,9 @@ export const COUNTRIES = {
     colors: { skin: '#f8d8c0', hair: '#c9a24a', papa: '#2e8b57', mama: '#8a4fc0' },
     // 未確認（ネイティブ確認待ち）
     phrases: [
-      { key: 'papa', text: "It's Papa!", speaker: 'papa' },
-      { key: 'mama', text: "It's Mama!", speaker: 'mama' },
-      { key: 'cute', text: "You're so cute!", speaker: 'both' },
+      { key: 'papa', text: "It's Papa!", ja: 'イッツパパ', speaker: 'papa' },
+      { key: 'mama', text: "It's Mama!", ja: 'イッツママ', speaker: 'mama' },
+      { key: 'cute', text: "You're so cute!", ja: 'ユアソーキュート', speaker: 'both' },
     ],
     coreLabels: { papa: 'Papa', mama: 'Mama', cute: 'cute' },
     variants: {
@@ -90,9 +95,9 @@ export const COUNTRIES = {
     colors: { skin: '#e0a878', hair: '#4a2c17', papa: '#c0392b', mama: '#e5b200' },
     // 未確認（ネイティブ確認待ち。赤ちゃんの性別で語尾が変わる）
     phrases: [
-      { key: 'papa', text: 'Soy papá', speaker: 'papa' },
-      { key: 'mama', text: 'Soy mamá', speaker: 'mama' },
-      { key: 'cute', text: 'Qué bonito', speaker: 'both' },
+      { key: 'papa', text: 'Soy papá', ja: 'ソイパパ', speaker: 'papa' },
+      { key: 'mama', text: 'Soy mamá', ja: 'ソイママ', speaker: 'mama' },
+      { key: 'cute', text: 'Qué bonito', ja: 'ケボニート', speaker: 'both' },
     ],
     coreLabels: { papa: 'papá', mama: 'mamá', cute: 'bonito' },
     variants: {

@@ -1,7 +1,7 @@
 // 採点の自動テスト。リポジトリ直下で `npm test`（node --test）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { judge, normalize } from './judge.js';
+import { judge, normalize, approxFind } from './judge.js';
 
 test('normalize: ひらがな→カタカナ、長音・記号を落とす、アクセントを外す', () => {
   assert.equal(normalize('かわいいねー！'), 'カワイイネ');
@@ -28,6 +28,12 @@ const cases = [
   ['スペイン・Plan B アクセント付き', 'es', 'B', 'soy papá soy mamá qué bonito', 'best', 12],
   ['スペイン・Plan A カタカナ', 'es', 'A', 'ソイパパ ソイママ ケボニート', 'best', 12],
   ['スペイン・Plan B 1語（女性形）', 'es', 'B', 'bonita', 'normal', 4],
+  // 実機で出た聞き違い（Android Chrome, Plan A, "It's Papa" → ビーツ パパ）
+  ['アメリカ・Plan A 聞き違い（イッツ→ビーツ）', 'us', 'A', 'ビーツ パパ', 'normal', 4],
+  ['アメリカ・Plan A 聞き違い2語', 'us', 'A', 'ビーツ パパ ビーツ ママ', 'normal', 6],
+  ['アメリカ・Plan A 核の語が崩れても言葉全体が近ければ拾う', 'us', 'A', 'イッツパア', 'normal', 4],
+  ['アメリカ・Plan A ママだけ（パパの言葉と誤認しない）', 'us', 'A', 'ママ', 'normal', 4],
+  ['アメリカ・Plan A 近似照合は別の語まで拾わない', 'us', 'A', 'こんにちは', 'creepy', 0],
 ];
 
 for (const [name, countryId, plan, transcript, verdict, points] of cases) {
@@ -37,6 +43,12 @@ for (const [name, countryId, plan, transcript, verdict, points] of cases) {
     assert.equal(r.points, points, JSON.stringify(r));
   });
 }
+
+test('approxFind: 最も近い部分と文字違いの数を返す', () => {
+  assert.deepEqual(approxFind('ビツパパ', 'イツパパ'), { distance: 1, start: 0, end: 4 });
+  assert.deepEqual(approxFind('イツパパイツママ', 'イツママ'), { distance: 0, start: 4, end: 8 });
+  assert.equal(approxFind('ママ', 'イツパパ').distance >= 3, true);
+});
 
 test('順番の判定は見つかった語の位置で決まる', () => {
   const r = judge('かわいい パパ ママ', { countryId: 'jp', plan: 'A' });

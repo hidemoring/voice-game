@@ -103,6 +103,16 @@
       <label><input type="radio" name="dbg-plan" value="B"> Plan B（その国の言語で認識）</label>
     </div>
     <div class="row"><label>テスター名<br><input type="text" id="dbg-tester" placeholder="任意"></label></div>
+    <div class="row">
+      <label>録音する秒数（仕様は3秒。3語を言い切れないときの比較用）<br>
+        <select id="dbg-seconds">
+          <option value="3">3秒</option>
+          <option value="4">4秒</option>
+          <option value="5">5秒</option>
+          <option value="6">6秒</option>
+        </select>
+      </label>
+    </div>
     <div class="row"><label><input type="checkbox" id="dbg-showraw"> 結果画面に認識結果を出す</label></div>
     <div class="row"><label><input type="checkbox" id="dbg-textinput"> マイクの代わりにテキストで入力する（判定の確認用）</label></div>
     <h2>記録 <span id="dbg-count" class="small"></span></h2>
