@@ -11,6 +11,13 @@ import {
 const $ = (sel) => document.querySelector(sel);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const MARKS = { surprised: '！？', happy: '♪', puzzled: '？', creeped: '…' };
+// マイクが使えなかったときの説明（判定せず、会話に戻す）
+const MIC_ERRORS = {
+  'not-allowed': 'マイクの使用が許可されていません。アドレスバーの左のアイコンからマイクを許可して、もう一度押してください。Claudeアプリ内のブラウザではマイクが使えないので、Chrome本体で開いてください。',
+  'service-not-allowed': 'このブラウザでは音声認識サービスが使えません。Chrome本体で開いてください。',
+  'audio-capture': 'マイクが見つかりません。マイクの接続を確認してください。',
+  'no-start': '音声認識が始まりませんでした。マイクの許可を確認して、もう一度押してください。',
+};
 
 const state = { country: null, plan: 'A', loopToken: 0, input: null, result: null };
 
@@ -120,6 +127,7 @@ async function startInput() {
 
   const useText = s.textInput || !speech.recognitionSupported;
   $('#text-input').hidden = !useText;
+  $('#mic-error').hidden = true;
   $('#countdown').hidden = useText;
   if (useText) {
     $('#input-phase').textContent = 'テキストで入力してください（認識の代わり）';
@@ -144,7 +152,23 @@ async function startInput() {
       setBar(remain / RECORD_SECONDS);
     },
   });
+  if (MIC_ERRORS[raw.error]) {
+    showMicError(raw.error);
+    return;
+  }
   finishInput(raw.transcript, { ...raw, recogLang: lang, method: 'mic' });
+}
+function showMicError(error) {
+  $('#countdown').hidden = true;
+  $('#input-phase').textContent = 'マイクが使えませんでした';
+  $('#mic-error-text').textContent = `${MIC_ERRORS[error]}（${error}）`;
+  $('#mic-error').hidden = false;
+}
+// 会話に戻る（両親の声のループを再開）
+function backToTalk() {
+  $('#btn-mic').disabled = false;
+  setMode('talk');
+  runParentLoop();
 }
 function submitText() {
   const t = $('#text-field').value;
@@ -332,6 +356,7 @@ function init() {
   $('#btn-birth-next').addEventListener('click', startAge1);
   $('#btn-mic').addEventListener('click', startInput);
   $('#btn-text-judge').addEventListener('click', submitText);
+  $('#btn-mic-retry').addEventListener('click', backToTalk);
   $('#text-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitText(); });
   $('#btn-save').addEventListener('click', saveRecord);
   $('#btn-again').addEventListener('click', () => { resetEarth(); show('earth'); });
