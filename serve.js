@@ -20,6 +20,12 @@ const MIME = {
 
 http.createServer((req, res) => {
   const urlPath = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  // ルートは試作へ飛ばす（リポジトリ直下に index.html はない）
+  if (urlPath === '/') {
+    res.writeHead(302, { Location: '/prototype/' });
+    res.end();
+    return;
+  }
   const file = path.normalize(path.join(root, urlPath));
   if (!file.startsWith(root)) {
     res.writeHead(403);
@@ -46,7 +52,7 @@ function sendFile(file, res) {
   fs.readFile(file, (err, data) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end(`404 ${file}`);
+      res.end(`404 Not Found: ${path.relative(root, file).replace(/\\/g, '/')}\n試作は /prototype/ にあります`);
       return;
     }
     res.writeHead(200, {
