@@ -136,6 +136,15 @@ export function voiceStatus() {
   return { ja: !!voiceFor('ja-JP'), en: !!voiceFor('en-US'), es: !!voiceFor('es-ES') };
 }
 
+// その言語の声があるか。声の一覧がまだ取れていないときは null（不明。ブラウザに任せる）
+// 声がない言語を既定の声（日本語など）で読むとローマ字読みになるので、呼び出し側で読み上げを止める
+export function hasVoiceFor(lang) {
+  if (!synthesisSupported) return false;
+  if (!voices.length) loadVoices();
+  if (!voices.length) return null;
+  return !!voiceFor(lang);
+}
+
 export function speak(text, lang, { rate = 0.9, pitch = 1 } = {}) {
   return new Promise((resolve) => {
     if (!synthesisSupported || !text) {

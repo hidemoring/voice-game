@@ -19,7 +19,13 @@ const MIC_ERRORS = {
   'no-start': '音声認識が始まりませんでした。マイクの許可を確認して、もう一度押してください。',
 };
 
-const state = { country: null, plan: 'A', loopToken: 0, input: null, result: null };
+const state = { country: null, plan: 'A', loopToken: 0, loopPaused: false, input: null, result: null };
+const LANG_NAMES = { 'ja-JP': '日本語', 'en-US': '英語', 'es-ES': 'スペイン語' };
+
+// その国の言語の読み上げ声が端末にないときは読まない（既定の声で読むとローマ字読みになる）
+function canSpeak(country) {
+  return speech.hasVoiceFor(country.lang) !== false;
+}
 
 // ---- 画面 ----
 function show(name) {
@@ -79,6 +85,9 @@ function startAge1() {
   $('#self-report').hidden = false;
   $('#btn-mic').disabled = false;
   $('#btn-mic').textContent = `▶ まねして言う（${recordSeconds()}秒）`;
+  const note = $('#voice-note');
+  note.hidden = canSpeak(c);
+  note.textContent = `この端末には${LANG_NAMES[c.lang] || c.lang}の読み上げの声がないため、両親のセリフは字幕だけです。`;
   setMode('talk');
   show('age1');
   runParentLoop();
@@ -97,13 +106,16 @@ function highlightSpeaker(who) {
 // ボタンを押すまで3語を繰り返す
 async function runParentLoop() {
   const token = ++state.loopToken;
+  state.loopPaused = false;
   const c = state.country;
+  const speakable = canSpeak(c);
   while (token === state.loopToken) {
     for (const p of c.phrases) {
       if (token !== state.loopToken) return;
       setDialogue(p.text);
       highlightSpeaker(p.speaker);
-      await speech.speak(p.text, c.lang, { pitch: p.speaker === 'papa' ? 0.7 : 1.3, rate: 0.9 });
+      if (speakable) await speech.speak(p.text, c.lang, { pitch: p.speaker === 'papa' ? 0.7 : 1.3, rate: 0.9 });
+      else await wait(1500);
       highlightSpeaker(null);
       await wait(350);
     }
@@ -114,6 +126,22 @@ function stopParentLoop() {
   state.loopToken++;
   speech.cancelSpeech();
   highlightSpeaker(null);
+}
+// タブが隠れたら両親の声を止め、戻ったら再開する（裏で鳴り続けないように）
+function initVisibility() {
+  document.addEventListener('visibilitychange', () => {
+    const inTalk = $('#screen-age1').classList.contains('active') && $('#screen-age1').dataset.mode === 'talk';
+    if (document.hidden) {
+      speech.cancelSpeech();
+      if (inTalk) {
+        stopParentLoop();
+        state.loopPaused = true;
+      }
+    } else if (state.loopPaused && inTalk) {
+      runParentLoop();
+    }
+  });
+  window.addEventListener('pagehide', () => speech.cancelSpeech());
 }
 
 // ---- 1歳：入力 ----
@@ -231,7 +259,7 @@ async function showResult(result) {
   setReaction(reaction);
   setDialogue(c.reactions[reaction]);
   speech.playReaction(reaction);
-  speech.speak(c.reactions[reaction], c.lang, { pitch: 1.2, rate: 1 });
+  if (canSpeak(c)) speech.speak(c.reactions[reaction], c.lang, { pitch: 1.2, rate: 1 });
   await wait(1400);
 
   addLine(t.text);
@@ -363,6 +391,7 @@ function initDebug() {
 function init() {
   initTitle();
   initDebug();
+  initVisibility();
   $('#btn-arrow').addEventListener('click', shootArrow);
   $('#btn-birth-next').addEventListener('click', startAge1);
   $('#btn-mic').addEventListener('click', startInput);
