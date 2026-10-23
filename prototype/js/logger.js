@@ -54,7 +54,7 @@ export function clearLogs() {
 export const TSV_COLUMNS = [
   'time', 'build', 'tester', 'country', 'lang', 'plan', 'recogLang', 'method', 'seconds', 'browser',
   'transcript', 'alternatives', 'interim', 'found', 'inOrder', 'extra', 'rest', 'verdict', 'points',
-  'selfReport', 'usedInterim', 'error', 'durationMs',
+  'selfReport', 'usedInterim', 'error', 'durationMs', 'ua',
 ];
 
 export function toTSV(logs) {
@@ -97,5 +97,9 @@ export function browserInfo() {
   else if (/Chrome\//.test(ua)) browser = 'Chrome';
   else if (/Safari\//.test(ua)) browser = 'Safari';
   else if (/Firefox\//.test(ua)) browser = 'Firefox';
-  return { os, browser, label: `${os}/${browser}`, ua };
+  // iOS で "Safari/" がない＝アプリ内ブラウザ（WebView）かホーム画面から開いた状態。
+  // 10/23 の iPhone 記録が「iOS/other」で、音声認識が空や「いいよ」しか返らなかった
+  else if (os === 'iOS' && /AppleWebKit/.test(ua)) browser = navigator.standalone ? 'ホーム画面' : 'アプリ内ブラウザ';
+  const inApp = browser === 'アプリ内ブラウザ' || browser === 'ホーム画面';
+  return { os, browser, label: `${os}/${browser}`, ua, inApp };
 }

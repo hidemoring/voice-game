@@ -60,6 +60,10 @@ function tryUnlock() {
 function initTitle() {
   $('#build').textContent = `build ${BUILD}`;
   applyGate();
+  if (browserInfo().inApp) {
+    $('#support-note').textContent += ' いまはアプリ内ブラウザで開いているようです。音声認識が働かないことがあるので、右下の共有ボタンなどから Safari で開き直してください。';
+    $('#support-note').classList.add('warn');
+  }
   $('#btn-gate').addEventListener('click', tryUnlock);
   $('#gate-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
   if (!speech.recognitionSupported) {
@@ -370,7 +374,8 @@ function refreshDebug() {
   const b = browserInfo();
   const mark = (ok) => (ok ? '○' : '×');
   $('#dbg-support').textContent =
-    `build ${BUILD}｜${b.label}｜音声認識: ${mark(speech.recognitionSupported)}｜読み上げの声 ja:${mark(v.ja)} en:${mark(v.en)} es:${mark(v.es)}`;
+    `build ${BUILD}｜${b.label}｜音声認識: ${mark(speech.recognitionSupported)}｜読み上げの声 ja:${mark(v.ja)} en:${mark(v.en)} es:${mark(v.es)}`
+    + (b.inApp ? '｜※アプリ内ブラウザでは音声認識が働かないことがあります。Safari で開いてください' : '');
   const logs = getLogs();
   $('#dbg-count').textContent = `${logs.length}件`;
   $('#dbg-tsv').value = toTSV(logs);
