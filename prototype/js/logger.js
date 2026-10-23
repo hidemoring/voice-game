@@ -2,7 +2,7 @@
 
 const LOG_KEY = 'voiceGame.logs';
 const SETTINGS_KEY = 'voiceGame.settings';
-const DEFAULT_SETTINGS = { country: 'random', plan: 'A', tester: '', seconds: 3, showRaw: true, textInput: false };
+const DEFAULT_SETTINGS = { country: 'random', plan: 'A', tester: '', seconds: 6, showRaw: true, textInput: false };
 
 function read(key, fallback) {
   try {

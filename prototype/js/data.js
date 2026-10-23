@@ -3,7 +3,9 @@
 // 判定の調整はこのファイルだけ直せば済むようにしてある。
 
 // 録音する秒数（認識が始まってから数える）
-export const RECORD_SECONDS = 3;
+// 仕様書v1は3秒だったが、10/23実機検証（Android Chrome）で3秒だと1語目しか残らず、
+// 5秒でも母語でぎりぎりだったため6秒に変更（10/23ユーザー決定）
+export const RECORD_SECONDS = 6;
 
 // 採点（仕様書の表。案）
 export const POINTS = {
