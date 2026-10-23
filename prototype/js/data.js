@@ -4,7 +4,7 @@
 
 // ビルド番号。タイトル画面・⚙・記録に出す。端末が古いコードを使っていないか見分けるため、
 // prototype を直して push するたびに上げる（GitHub Pages は10分間キャッシュされる）
-export const BUILD = '20261023-08';
+export const BUILD = '20261023-09';
 
 // 録音する秒数（認識が始まってから数える）
 // 仕様書v1は3秒だったが、10/23実機検証（Android Chrome）で3秒だと1語目しか残らず、
@@ -84,7 +84,8 @@ export const COUNTRIES = {
     },
     fillers: {
       ja: ['イッツ', 'イツ', 'イッ', 'ユアソー', 'ユアー', 'ユア', 'ユー', 'ソー', 'ソウ', 'です', 'よ', 'ね'],
-      native: ["it's", 'its', 'it is', 'it', 'is', "you're", 'your', 'you are', 'you', 'are', 'so', 'yes', 'oh', 'a'],
+      // 1文字の語は入れない（「eats」が「e」「ts」に割れて余計な語の判定が狂う。10/23実機検証）
+      native: ["it's", 'its', 'it is', 'it', 'is', "you're", 'your', 'you are', 'you', 'are', 'so', 'yes', 'oh'],
     },
     reactions: {
       surprised: 'What!? Did you hear that!? Amazing!',

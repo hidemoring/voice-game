@@ -5,6 +5,8 @@ import { mergeFinals } from './transcript.js';
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const recognitionSupported = !!SR;
 export const synthesisSupported = 'speechSynthesis' in window;
+// Android Chrome は確定結果を先頭からの累積で送る（10/23実機検証）。最後の結果だけを使う
+const CUMULATIVE_FINALS = /Android/.test(navigator.userAgent);
 
 // ---- 音声認識 ----
 // 認識が実際に始まってから seconds 秒で止め、確定した結果を返す。
@@ -35,7 +37,7 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
       clearTimeout(startGuard);
       // Android Chrome は空の確定結果を混ぜてくるので除く
       const list = finals.filter((f) => f && f.transcript.trim());
-      const final = mergeFinals(list.map((f) => f.transcript));
+      const final = mergeFinals(list.map((f) => f.transcript), { cumulative: CUMULATIVE_FINALS });
       const transcript = final || interim.trim();
       resolve({
         transcript,

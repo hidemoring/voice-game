@@ -27,7 +27,18 @@ function similar(a, b) {
   return levenshtein(a, b) <= Math.max(1, Math.floor(n / 5));
 }
 
-export function mergeFinals(texts) {
+// cumulative: true のとき（Android Chrome）は、最後の空でない結果をそのまま使う。
+// 10/23 実機検証の Android 記録7件はすべて「最後の結果＝先頭からの全文」だった。
+// 途中の言い直し（「it's Papa eats」→「it's Papa it's mama」）は先頭が3文字以上違うことがあり、
+// 下の近似照合では別の発話とみなしてつないでしまうため。
+export function mergeFinals(texts, { cumulative = false } = {}) {
+  if (cumulative) {
+    for (let i = texts.length - 1; i >= 0; i--) {
+      const t = (texts[i] || '').trim();
+      if (t) return t;
+    }
+    return '';
+  }
   let acc = '';
   for (const raw of texts) {
     const t = (raw || '').trim();

@@ -34,6 +34,11 @@ const cases = [
   ['アメリカ・Plan A 核の語が崩れても言葉全体が近ければ拾う', 'us', 'A', 'イッツパア', 'normal', 4],
   ['アメリカ・Plan A ママだけ（パパの言葉と誤認しない）', 'us', 'A', 'ママ', 'normal', 4],
   ['アメリカ・Plan A 近似照合は別の語まで拾わない', 'us', 'A', 'こんにちは', 'creepy', 0],
+  // 実機で出た言い直し（Android Chrome, Plan A, パパ→パワー）
+  ['アメリカ・Plan A 核の語が崩れた2語', 'us', 'A', 'イッツ パワーいつママ', 'normal', 6],
+  // 実機で出た2語（Android Chrome, Plan B）
+  ['アメリカ・Plan B 2語', 'us', 'B', "it's Papa it's mama", 'normal', 6],
+  ['アメリカ・Plan B 聞き違いの語が余計な語になる', 'us', 'B', "it's Papa eats it's mama", 'creepy', 3],
 ];
 
 for (const [name, countryId, plan, transcript, verdict, points] of cases) {

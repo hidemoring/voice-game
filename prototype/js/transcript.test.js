@@ -24,6 +24,14 @@ test('累積の途中で短くなったり語が直されたりしても1つに�
   assert.equal(mergeFinals(['ビーツ パパ', 'イーツ パパ イッツママ']), 'イーツ パパ イッツママ');
 });
 
+test('cumulative（Android Chrome）では最後の空でない結果を使う', () => {
+  // 10/23 実機検証（アメリカ・Plan B）：途中の「eats」が「it's」に言い直された
+  const finals = ["it's", "it's Papa", "it's Papa eats", "it's Papa it's mama"];
+  assert.equal(mergeFinals(finals, { cumulative: true }), "it's Papa it's mama");
+  assert.equal(mergeFinals(['ソイ パパ', ''], { cumulative: true }), 'ソイ パパ');
+  assert.equal(mergeFinals([], { cumulative: true }), '');
+});
+
 test('PC Chrome の区切りごとの確定結果はつなぐ', () => {
   assert.equal(mergeFinals(["It's Papa", "It's Mama", "You're so cute"]), "It's Papa It's Mama You're so cute");
   assert.equal(mergeFinals(['ソイ パパ', 'ソイ ママ', 'ケ ボニート']), 'ソイ パパ ソイ ママ ケ ボニート');
