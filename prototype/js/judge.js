@@ -1,7 +1,10 @@
 // 認識結果の正規化・語の照合・順番・余計な語・採点。
 // ブラウザに依存しないので node --test で確かめられる（judge.test.js）。
 
-import { COUNTRIES, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO } from './data.js';
+import { COUNTRIES, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO, READINGS } from './data.js';
+
+// 長いものから置き換える（「予想9」→「ヨソウキュウ」）
+const READING_KEYS = Object.keys(READINGS).sort((a, b) => b.length - a.length);
 
 const LATIN = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u', ñ: 'n', à: 'a', è: 'e', ì: 'i', ò: 'o', ù: 'u' };
 // 長音・促音・空白・記号は落とす（「近ければ拾う」ため）
@@ -10,6 +13,7 @@ const DROP = /[ーッ\s　。、．，！？!?.,'’"「」『』（）()・…\
 export function normalize(text) {
   if (!text) return '';
   let s = String(text).normalize('NFKC').toLowerCase();
+  for (const k of READING_KEYS) s = s.split(k).join(READINGS[k]);
   s = s.replace(/[áéíóúüñàèìòù]/g, (ch) => LATIN[ch]);
   // ひらがな → カタカナ
   s = s.replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));

@@ -9,6 +9,9 @@ test('normalize: ひらがな→カタカナ、長音・記号を落とす、ア
   assert.equal(normalize('¿Qué bonito?'), 'quebonito');
   assert.equal(normalize(''), '');
   assert.equal(normalize(undefined), '');
+  // 漢字・数字の読み替え（iPhone の ja-JP 認識）
+  assert.equal(normalize('予想9'), 'ヨソウキュウ');
+  assert.equal(normalize('添いママ'), 'ソイママ');
 });
 
 const cases = [
@@ -39,6 +42,10 @@ const cases = [
   // 実機で出た2語（Android Chrome, Plan B）
   ['アメリカ・Plan B 2語', 'us', 'B', "it's Papa it's mama", 'normal', 6],
   ['アメリカ・Plan B 聞き違いの語が余計な語になる', 'us', 'B', "it's Papa eats it's mama", 'creepy', 3],
+  // iPhone Safari（iOS 18）の Plan A で出た実例
+  ['アメリカ・Plan A iPhone（漢字と数字で返る）', 'us', 'A', 'いつパパいつママ予想9', 'best', 12],
+  ['スペイン・Plan A iPhone（テゴニド）', 'es', 'A', 'そいパパそいママテゴニド', 'best', 12],
+  ['日本・Plan A iPhone（先頭のパパが欠けた）', 'jp', 'A', 'ですよママですよかわいいね', 'normal', 6],
 ];
 
 for (const [name, countryId, plan, transcript, verdict, points] of cases) {

@@ -4,7 +4,7 @@
 
 // ビルド番号。タイトル画面・⚙・記録に出す。端末が古いコードを使っていないか見分けるため、
 // prototype を直して push するたびに上げる（GitHub Pages は10分間キャッシュされる）
-export const BUILD = '20261023-14';
+export const BUILD = '20261023-15';
 
 // 公開の開閉。false にして push すると、タイトルが「ただいま準備中」になり、
 // 合言葉を入れた人だけ先に進める（一度入れた端末は記憶する）。
@@ -29,6 +29,17 @@ export const POINTS = {
 
 // 正規化後にこれ以上の文字が残ったら「余計な語あり」。1文字の聞き違いは見逃す
 export const EXTRA_MIN_LENGTH = 2;
+
+// ja-JP の認識は外国語を漢字や数字に変換してしまうことがある（iPhone に多い）。
+// 照合の前にカタカナへ読み替える。実機の記録で出たものを足していく
+export const READINGS = {
+  予想: 'ヨソウ', // You're so（iPhone）
+  9: 'キュウ', // cute（iPhone）
+  九: 'キュウ',
+  添い: 'ソイ', // Soy（Android・iPhone）
+  沿い: 'ソイ',
+  可愛い: 'カワイイ',
+};
 
 // 言葉全体の近似照合で許す文字違いの数 = floor(言葉の長さ / FUZZY_RATIO)
 // 例：「イツパパ」（4文字）なら1文字違いまで、「ユアソキュト」（6文字）なら2文字違いまで
@@ -81,7 +92,8 @@ export const COUNTRIES = {
     ],
     coreLabels: { papa: 'Papa', mama: 'Mama', cute: 'cute' },
     variants: {
-      ja: { papa: ['パパ', 'ババ'], mama: ['ママ', 'マンマ'], cute: ['キュート', 'キュウト', 'キュー'] },
+      // キュウ：iPhone で "cute" が「9」と返った（READINGS で キュウ に読み替え）
+      ja: { papa: ['パパ', 'ババ'], mama: ['ママ', 'マンマ'], cute: ['キュート', 'キュウト', 'キュー', 'キュウ'] },
       native: {
         papa: ['papa', 'poppa', 'pappa', 'pa pa'],
         mama: ['mama', 'momma', 'mamma', 'ma ma'],
@@ -89,7 +101,8 @@ export const COUNTRIES = {
       },
     },
     fillers: {
-      ja: ['イッツ', 'イツ', 'イッ', 'ユアソー', 'ユアー', 'ユア', 'ユー', 'ソー', 'ソウ', 'です', 'よ', 'ね'],
+      // ヨソウ・ヨソ：iPhone で "You're so" が「予想」と返った
+      ja: ['イッツ', 'イツ', 'イッ', 'ユアソー', 'ユアー', 'ユア', 'ユー', 'ヨソウ', 'ヨソ', 'ソー', 'ソウ', 'です', 'よ', 'ね'],
       // 1文字の語は入れない（「eats」が「e」「ts」に割れて余計な語の判定が狂う。10/23実機検証）
       native: ["it's", 'its', 'it is', 'it', 'is', "you're", 'your', 'you are', 'you', 'are', 'so', 'yes', 'oh'],
     },
@@ -114,7 +127,8 @@ export const COUNTRIES = {
     ],
     coreLabels: { papa: 'papá', mama: 'mamá', cute: 'bonito' },
     variants: {
-      ja: { papa: ['パパ', 'ババ'], mama: ['ママ', 'マンマ'], cute: ['ボニート', 'ボニト', 'ボニータ', 'ボニー'] },
+      // ゴニド・ゴニト：iPhone で "Qué bonito" が「テゴニド」と返った
+      ja: { papa: ['パパ', 'ババ'], mama: ['ママ', 'マンマ'], cute: ['ボニート', 'ボニト', 'ボニータ', 'ボニー', 'ゴニド', 'ゴニト', 'ボニド'] },
       native: {
         papa: ['papá', 'papa', 'papi'],
         mama: ['mamá', 'mama', 'mami'],

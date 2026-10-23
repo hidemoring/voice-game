@@ -7,6 +7,9 @@ export const recognitionSupported = !!SR;
 export const synthesisSupported = 'speechSynthesis' in window;
 // Android Chrome は確定結果を先頭からの累積で送る（10/23実機検証）。最後の結果だけを使う
 const CUMULATIVE_FINALS = /Android/.test(navigator.userAgent);
+// iPhone は onstart 直後の声が落ちる（「パパですよ」の「パパ」が欠けた。10/23実機検証）。
+// 合図と秒数のカウントを少し遅らせる
+const CUE_DELAY_MS = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 700 : 0;
 
 // ---- 音声認識 ----
 // 認識が実際に始まってから seconds 秒で止め、確定した結果を返す。
@@ -35,6 +38,7 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
       clearInterval(tick);
       clearTimeout(stopGuard);
       clearTimeout(startGuard);
+      clearTimeout(cueTimer);
       // Android Chrome は空の確定結果を混ぜてくるので除く
       const list = finals.filter((f) => f && f.transcript.trim());
       const final = mergeFinals(list.map((f) => f.transcript), { cumulative: CUMULATIVE_FINALS });
@@ -49,8 +53,13 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
       });
     };
 
+    let cueTimer = null;
     rec.onstart = () => {
       started = true;
+      cueTimer = setTimeout(beginCountdown, CUE_DELAY_MS);
+    };
+    const beginCountdown = () => {
+      if (done) return;
       startedAt = Date.now();
       onPhase?.('listening');
       tick = setInterval(() => {
