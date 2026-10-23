@@ -16,8 +16,20 @@
 <!-- タイトル -->
 <section class="screen active" id="screen-title">
   <h1 class="title">音声入力ゲーム<br><span>試作 v1　<span id="build"></span></span></h1>
-  <div class="window notice" id="support-note">このゲームはマイクを使います。はじめると、ブラウザがマイクの許可を求めます。</div>
-  <button class="btn big" id="btn-start">はじめる</button>
+  <div id="title-main">
+    <div class="window notice" id="support-note">このゲームはマイクを使います。はじめると、ブラウザがマイクの許可を求めます。</div>
+    <button class="btn big" id="btn-start">はじめる</button>
+  </div>
+  <!-- 閉鎖中（data.js の OPEN が false）に出す -->
+  <div class="window" id="gate" hidden>
+    <p>ただいま準備中です。</p>
+    <p class="small">関係者の方は合言葉を入れてください。</p>
+    <div class="text-input">
+      <input id="gate-field" type="password" placeholder="合言葉" autocomplete="off">
+      <button class="btn" id="btn-gate">入る</button>
+    </div>
+    <p class="small warn" id="gate-msg"></p>
+  </div>
 </section>
 
 <!-- 地球と矢 -->

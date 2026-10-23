@@ -28,6 +28,10 @@ npm test
 
 `git push` で1〜2分後に https://hidemoring.github.io/voice-game/ へ反映される。ただし GitHub Pages は10分間キャッシュされるので、開いたばかりの端末は古いコードのままのことがある。タイトル画面と⚙の「build」番号（`js/data.js` の `BUILD`。push のたびに上げる）で見分け、古ければ10分待つか、Chrome のサイト設定でデータを消去して開き直す。
 
+## 一時的に閉じる
+
+`js/data.js` の `OPEN` を `false` にして push すると、タイトルが「ただいま準備中」になり、`PASSPHRASE` の合言葉を入れた端末だけ先に進める（⚙も隠れる）。再開は `true` に戻して push。合言葉はソースから読めるので、気軽に遊ばれるのを止める程度の仕組み。Claude に「閉じて」「開けて」と頼めば1回の push で切り替わる。
+
 ## 判定の調整
 
 `js/data.js` の `variants`（核になる語の表記ゆれ）と `fillers`（両親の言葉に含まれる核以外の語）を直す。

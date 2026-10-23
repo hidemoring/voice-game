@@ -1,11 +1,12 @@
 // 画面遷移と進行。タイトル → 地球（矢） → 誕生 → 1歳（会話 → 入力 → 結果）
 
-import { COUNTRIES, TEXTS, RECORD_SECONDS, REACTION_OF, BUILD } from './data.js';
+import { COUNTRIES, TEXTS, RECORD_SECONDS, REACTION_OF, BUILD, OPEN, PASSPHRASE } from './data.js';
 import { judge, recogLang } from './judge.js';
 import * as speech from './speech.js';
 import { parentSVG } from './sprites.js';
 import {
   getSettings, saveSettings, getLogs, addLog, clearLogs, toTSV, downloadText, copyText, browserInfo,
+  isUnlockedWith, saveUnlock,
 } from './logger.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -36,9 +37,31 @@ function setMode(mode) {
   $('#screen-age1').dataset.mode = mode;
 }
 
+// ---- 閉鎖フラグと合言葉 ----
+const normPass = (s) => String(s || '').normalize('NFKC').trim().toLowerCase();
+function applyGate() {
+  const open = OPEN || isUnlockedWith(PASSPHRASE);
+  $('#title-main').hidden = !open;
+  $('#gate').hidden = open;
+  $('#btn-debug').hidden = !open;
+}
+function tryUnlock() {
+  if (normPass($('#gate-field').value) === normPass(PASSPHRASE)) {
+    saveUnlock(PASSPHRASE);
+    $('#gate-field').value = '';
+    $('#gate-msg').textContent = '';
+    applyGate();
+  } else {
+    $('#gate-msg').textContent = '合言葉が違います。';
+  }
+}
+
 // ---- タイトル ----
 function initTitle() {
   $('#build').textContent = `build ${BUILD}`;
+  applyGate();
+  $('#btn-gate').addEventListener('click', tryUnlock);
+  $('#gate-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
   if (!speech.recognitionSupported) {
     $('#support-note').textContent = TEXTS.noRecognition;
     $('#support-note').classList.add('warn');

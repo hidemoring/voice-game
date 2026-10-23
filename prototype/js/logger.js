@@ -2,6 +2,7 @@
 
 const LOG_KEY = 'voiceGame.logs';
 const SETTINGS_KEY = 'voiceGame.settings';
+const UNLOCK_KEY = 'voiceGame.unlocked';
 const DEFAULT_SETTINGS = { country: 'random', plan: 'A', tester: '', seconds: 6, showRaw: true, textInput: false };
 
 function read(key, fallback) {
@@ -27,6 +28,14 @@ export function saveSettings(patch) {
   const s = { ...getSettings(), ...patch };
   write(SETTINGS_KEY, s);
   return s;
+}
+
+// 合言葉を入れた端末を記憶する。合言葉を変えたら記憶も無効になる
+export function isUnlockedWith(passphrase) {
+  return read(UNLOCK_KEY, '') === passphrase;
+}
+export function saveUnlock(passphrase) {
+  write(UNLOCK_KEY, passphrase);
 }
 
 export function getLogs() {
