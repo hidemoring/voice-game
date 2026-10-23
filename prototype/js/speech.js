@@ -1,5 +1,7 @@
 // 音声認識（Web Speech API）、読み上げ（speechSynthesis）、効果音（WebAudioで生成）。
 
+import { mergeFinals } from './transcript.js';
+
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const recognitionSupported = !!SR;
 export const synthesisSupported = 'speechSynthesis' in window;
@@ -33,7 +35,7 @@ export function listen({ lang, seconds = 3, onPhase, onTick }) {
       clearTimeout(startGuard);
       // Android Chrome は空の確定結果を混ぜてくるので除く
       const list = finals.filter((f) => f && f.transcript.trim());
-      const final = list.map((f) => f.transcript).join(' ').trim();
+      const final = mergeFinals(list.map((f) => f.transcript));
       const transcript = final || interim.trim();
       resolve({
         transcript,

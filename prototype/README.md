@@ -37,6 +37,7 @@ npm test
 | `js/data.js` | 国・言葉・判定用の語・結果テキスト・ポイント |
 | `js/judge.js` | 正規化・照合・採点（`judge.test.js` でテスト） |
 | `js/speech.js` | 音声認識・読み上げ・効果音 |
+| `js/transcript.js` | 確定結果のまとめ（Android Chrome の累積型に対応。`transcript.test.js` でテスト） |
 | `js/logger.js` | 記録と設定（localStorage）、書き出し |
 | `js/sprites.js` | 両親のドット絵（仮） |
 | `js/app.js` | 画面遷移と進行 |

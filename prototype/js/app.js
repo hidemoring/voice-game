@@ -283,7 +283,7 @@ function saveRecord() {
     ua: b.ua,
     transcript: r.transcript,
     normalized: r.normalized,
-    alternatives: (i.finals || []).flatMap((f) => f.alternatives.map((a) => a.transcript)),
+    alternatives: [...new Set((i.finals || []).flatMap((f) => f.alternatives.map((a) => a.transcript)))],
     interim: i.interim,
     usedInterim: !!i.usedInterim,
     error: i.error,

@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "start": "node serve.js",
-    "test": "node --test prototype/js/judge.test.js"
+    "test": "node --test \"prototype/js/*.test.js\""
   }
 }
