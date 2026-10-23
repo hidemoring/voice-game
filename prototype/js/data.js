@@ -4,12 +4,12 @@
 
 // ビルド番号。タイトル画面・⚙・記録に出す。端末が古いコードを使っていないか見分けるため、
 // prototype を直して push するたびに上げる（GitHub Pages は10分間キャッシュされる）
-export const BUILD = '20261023-10';
+export const BUILD = '20261023-11';
 
 // 公開の開閉。false にして push すると、タイトルが「ただいま準備中」になり、
 // 合言葉を入れた人だけ先に進める（一度入れた端末は記憶する）。
 // 合言葉はソースを読めば分かるので本当の保護ではなく、気軽に遊ばれるのを止める程度。
-export const OPEN = true;
+export const OPEN = false;
 export const PASSPHRASE = 'papamama';
 
 // 録音する秒数（認識が始まってから数える）
