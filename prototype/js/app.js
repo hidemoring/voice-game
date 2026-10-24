@@ -277,8 +277,12 @@ function rawSummary(result, input) {
     `認識（${input.recogLang}／Plan ${state.plan}／${input.method === 'text' ? 'テキスト' : 'マイク'}）: 「${result.transcript}」`,
     `見つかった語: ${result.found.length ? result.found.map((k) => c.coreLabels[k]).join('、') : 'なし'}`,
     `順番: ${result.found.length === 3 ? (result.inOrder ? '○' : '×') : '—'}　余計な語: ${result.extra ? `あり（${result.rest}）` : 'なし'}`,
-    `判定: ${TEXTS.verdictLabels[result.verdict]}　${result.points}点`,
+    `判定: ${TEXTS.verdictLabels[result.verdict]}　${result.points}点　${result.fan} fan${result.bonusFan ? `＋${result.bonusFan} bonus` : ''}`,
   ];
+  if (result.other) {
+    const oc = COUNTRIES[result.other.countryId];
+    parts.push(`ほかの言語: ${oc.name}の言葉（${result.other.found.map((k) => oc.coreLabels[k]).join('、')}）`);
+  }
   if (input.usedInterim) parts.push('※確定前の認識結果を使用');
   if (input.error) parts.push(`※認識エラー: ${input.error}`);
   const alts = (input.finals || []).flatMap((f) => f.alternatives.slice(1).map((a) => a.transcript)).filter(Boolean);
@@ -301,7 +305,13 @@ async function showResult(result) {
 
   addLine(t.text);
   await wait(1200);
-  addLine(`${t.group} ${result.points} point UP`, 'points');
+  addLine(TEXTS.pointsLine(result.points), 'score');
+  await wait(800);
+  addLine(TEXTS.fanLine(result.fan), 'fan');
+  if (result.bonusFan) {
+    await wait(800);
+    addLine(TEXTS.bonusLine(result.bonusFan), 'fan');
+  }
   if (t.invite) {
     await wait(800);
     addLine(TEXTS.invite, 'invite');
@@ -360,6 +370,9 @@ function saveRecord() {
     rest: r.rest,
     verdict: r.verdict,
     points: r.points,
+    fan: r.fan,
+    bonusFan: r.bonusFan,
+    otherLang: r.other ? r.other.lang : '',
     selfReport: said,
   });
   $('#self-report').hidden = true;

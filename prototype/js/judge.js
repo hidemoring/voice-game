@@ -1,7 +1,7 @@
 // 認識結果の正規化・語の照合・順番・余計な語・採点。
 // ブラウザに依存しないので node --test で確かめられる（judge.test.js）。
 
-import { COUNTRIES, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO, READINGS } from './data.js';
+import { COUNTRIES, AUDIENCE, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO, READINGS } from './data.js';
 
 // 長いものから置き換える（「予想9」→「ヨソウキュウ」）
 const READING_KEYS = Object.keys(READINGS).sort((a, b) => b.length - a.length);
@@ -62,10 +62,47 @@ export function approxFind(text, pattern) {
   return { distance: prev[end], start: prevStart[end], end };
 }
 
-export function judge(transcript, { countryId, plan }) {
-  const country = COUNTRIES[countryId];
+export function judge(transcript, { countryId, plan, audience = AUDIENCE }) {
   const rk = recogKey(plan);
   const norm = normalize(transcript);
+  const own = analyze(norm, COUNTRIES[countryId], rk);
+
+  // ほかの言語で言った（v3）：生まれた国の言葉では説明できない語が残り、
+  // ほかの国の両親の言葉なら1語以上見つかって全体の説明がつくとき。
+  // パパ／ママは3言語でほぼ同じ音なので、それだけなら生まれた国の言葉では説明が残らず、ここには来ない
+  let other = null;
+  if (own.extra) {
+    for (const c of Object.values(COUNTRIES)) {
+      if (c.id === countryId) continue;
+      const a = analyze(norm, c, rk);
+      if (a.found.length > 0 && !a.extra && (!other || a.found.length > other.found.length)) {
+        other = { countryId: c.id, lang: c.lang, found: a.found, inOrder: a.inOrder };
+      }
+    }
+  }
+
+  const { verdict, points, fan, bonusFan } = score(
+    { count: own.found.length, inOrder: own.inOrder, extra: own.extra, other: other && { count: other.found.length, inOrder: other.inOrder } },
+    audience,
+  );
+  return {
+    transcript: transcript || '',
+    normalized: norm,
+    found: own.found,
+    positions: own.positions,
+    inOrder: own.inOrder,
+    extra: own.extra,
+    rest: own.rest,
+    other,
+    verdict,
+    points,
+    fan,
+    bonusFan,
+  };
+}
+
+// 1つの国の両親の言葉と照合する：見つかった語、順番、余計な語
+function analyze(norm, country, rk) {
   const keys = country.phrases.map((p) => p.key);
 
   // 核になる語の位置。核そのものが含まれるか、言葉全体が近ければ「言った」とする
@@ -101,35 +138,30 @@ export function judge(transcript, { countryId, plan }) {
   for (const s of strip) rest = rest.split(s).join(' ');
   const fragments = rest.split(' ').filter(Boolean);
   const extra = fragments.some((f) => f.length >= EXTRA_MIN_LENGTH);
-
-  const { verdict, points } = score({ count: found.length, inOrder, extra });
-  return {
-    transcript: transcript || '',
-    normalized: norm,
-    found,
-    positions,
-    inOrder,
-    extra,
-    rest: fragments.join('/'),
-    verdict,
-    points,
-  };
+  return { found, positions, inOrder, extra, rest: fragments.join('/') };
 }
 
-export function score({ count, inOrder, extra }) {
-  if (count === 3 && inOrder && !extra) return { verdict: 'best', points: POINTS.best };
-  let base;
-  let verdict = 'normal';
-  if (count === 3) base = POINTS.three;
-  else if (count === 2) base = POINTS.two;
-  else if (count === 1) base = POINTS.one;
-  else {
-    base = POINTS.silent;
-    verdict = 'silent';
+// 言えた度合いの点数（100点満点）。3語順番どおりは100、それ以外は 20＋60×（言えた数÷3）
+function wordPoints(count, inOrder) {
+  if (count === 3 && inOrder) return POINTS.best;
+  return Math.round(POINTS.base + POINTS.range * (count / 3));
+}
+
+// 判定・点数・ファン（仕様書v3）。audience は画面に出ている人数
+// - 最良：3語・順番どおり（余計な語があってもよい）→ 人数＋同数のボーナス
+// - 通常：1語以上 → 人数
+// - ほかの言語で言った：点数は一致した国の言葉で同じ数え方の半分、ファンは人数の半分（切り捨て）。
+//   相手の言語で返せて満点なので、日本語を3語順番どおりに言っても相手が英語なら50点
+// - 気持ち悪がられる：核の語が1つもなく、両親の言葉ではない言葉しか言わない → 0
+// - 無音：何も言わない、聞き取れない、核以外の両親の言葉だけ → 0
+// 余計な語は点数に使わない
+export function score({ count, inOrder, extra, other = null }, audience = AUDIENCE) {
+  if (other) {
+    const points = Math.round(wordPoints(other.count, other.inOrder) * POINTS.otherRatio);
+    return { verdict: 'other', points, fan: Math.floor(audience / 2), bonusFan: 0 };
   }
-  if (extra) {
-    verdict = 'creepy';
-    base = Math.max(0, base - POINTS.extraPenalty);
-  }
-  return { verdict, points: base };
+  if (count === 3 && inOrder) return { verdict: 'best', points: POINTS.best, fan: audience, bonusFan: audience };
+  if (count > 0) return { verdict: 'normal', points: wordPoints(count, inOrder), fan: audience, bonusFan: 0 };
+  if (extra) return { verdict: 'creepy', points: POINTS.creepy, fan: 0, bonusFan: 0 };
+  return { verdict: 'silent', points: POINTS.silent, fan: 0, bonusFan: 0 };
 }

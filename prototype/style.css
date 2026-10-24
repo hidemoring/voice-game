@@ -179,7 +179,8 @@ html, body {
 }
 
 #result-lines p { margin: 0 0 10px; }
-#result-lines .points { color: var(--accent); font-size: 18px; }
+#result-lines .score { color: var(--accent); font-size: 26px; margin-bottom: 4px; }
+#result-lines .fan { color: var(--accent); font-size: 18px; margin-bottom: 4px; }
 #result-lines .invite { color: var(--accent); font-size: 20px; animation: blink 1s steps(2) infinite; }
 @keyframes blink { to { visibility: hidden; } }
 .raw {

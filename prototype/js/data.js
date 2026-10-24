@@ -4,7 +4,7 @@
 
 // ビルド番号。タイトル画面・⚙・記録に出す。端末が古いコードを使っていないか見分けるため、
 // prototype を直して push するたびに上げる（GitHub Pages は10分間キャッシュされる）
-export const BUILD = '20261023-15';
+export const BUILD = '20261024-16';
 
 // 公開の開閉。false にして push すると、タイトルが「ただいま準備中」になり、
 // 合言葉を入れた人だけ先に進める（一度入れた端末は記憶する）。
@@ -17,15 +17,13 @@ export const PASSPHRASE = 'papamama';
 // 5秒でも母語でぎりぎりだったため6秒に変更（10/23ユーザー決定）
 export const RECORD_SECONDS = 6;
 
-// 採点（仕様書の表。案）
-export const POINTS = {
-  best: 12, // 3語すべて、順番どおり、余計な語なし → お誘い
-  three: 8, // 3語すべて、順番違い
-  two: 6,
-  one: 4,
-  silent: 1, // 何も言わない、または聞き取れない
-  extraPenalty: 3, // 両親の言葉でない語が混ざる（最低0）
-};
+// 採点（仕様書v3）：言えた度合いを100点満点の点数に、両親への届き方をファンにする。
+// 点数：最良100、通常は 20＋60×（言えた数÷3）＝80／60／40、無音10、気持ち悪がられる0。
+// ほかの言語で言ったときは同じ数え方の半分（50／40／30／20）。相手の言語で返せて満点（10/24ユーザー決定）
+export const POINTS = { best: 100, base: 20, range: 60, silent: 10, creepy: 0, otherRatio: 0.5 };
+// ファン：画面に出ている人数ぶん増える。最良は同数のボーナス、ほかの言語で言ったときは半分（切り捨て）。
+// 人数はイベントごとに変わる前提。1歳は両親の2人
+export const AUDIENCE = 2;
 
 // 正規化後にこれ以上の文字が残ったら「余計な語あり」。1文字の聞き違いは見逃す
 export const EXTRA_MIN_LENGTH = 2;
@@ -149,7 +147,8 @@ export const COUNTRIES = {
 };
 
 // 判定 → 両親の反応
-export const REACTION_OF = { best: 'surprised', normal: 'happy', silent: 'puzzled', creepy: 'creeped' };
+// ほかの言語で言ったときは「首をかしげる」を使い回す（v3）
+export const REACTION_OF = { best: 'surprised', normal: 'happy', other: 'puzzled', silent: 'puzzled', creepy: 'creeped' };
 
 export const TEXTS = {
   micNotice: 'このゲームはマイクを使います。はじめると、ブラウザがマイクの許可を求めます。',
@@ -160,22 +159,26 @@ export const TEXTS = {
   results: {
     best: {
       text: '両親があなたを人前に連れ出し「この子がすごいの」と言いまわった。あなたは近所と親戚の人気者になった！',
-      group: '近所・親戚',
       invite: true,
     },
     normal: {
       text: '両親があなたを家族や親戚に見せ「この子がしゃべったの」と言いまわった。あなたは家族・親戚の人気者になった！',
-      group: '家族・親戚',
+    },
+    other: {
+      text: '両親はきょとんとしたあと、顔を見合わせて笑った。', // 仮（v3）
     },
     silent: {
       text: '両親は少しがっかりしたが、「まだ早いよね」と笑い合った。',
-      group: '家族',
     },
     creepy: {
       text: '両親は顔を見合わせた。「……今の、なに？」',
-      group: '家族',
     },
   },
+  // 点数とファンの表示（v3）。「+N Bonus Fans」「0 Fans」は仮の文言。
+  // 数と語の間は改行しない空白（スマホ幅で語だけが次の行に落ちないように）
+  pointsLine: (n) => `${n}点`,
+  fanLine: (n) => (n === 0 ? '0\u00a0Fans' : `${n}\u00a0${n === 1 ? 'Fan' : 'Fans'}\u00a0Get!`),
+  bonusLine: (n) => `+${n}\u00a0Bonus\u00a0${n === 1 ? 'Fan' : 'Fans'}`,
   invite: 'お誘いが来た',
-  verdictLabels: { best: '最良', normal: '通常', silent: '無音', creepy: '気持ち悪がられる' },
+  verdictLabels: { best: '最良', normal: '通常', other: 'ほかの言語', silent: '無音', creepy: '気持ち悪がられる' },
 };

@@ -53,7 +53,7 @@ export function clearLogs() {
 
 export const TSV_COLUMNS = [
   'time', 'build', 'tester', 'country', 'lang', 'plan', 'recogLang', 'method', 'seconds', 'browser',
-  'transcript', 'alternatives', 'interim', 'found', 'inOrder', 'extra', 'rest', 'verdict', 'points',
+  'transcript', 'alternatives', 'interim', 'found', 'inOrder', 'extra', 'rest', 'verdict', 'points', 'fan', 'bonusFan', 'otherLang',
   'selfReport', 'usedInterim', 'error', 'durationMs', 'ua',
 ];
 
