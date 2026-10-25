@@ -141,7 +141,7 @@ function analyze(norm, country, rk) {
   return { found, positions, inOrder, extra, rest: fragments.join('/') };
 }
 
-// 言えた度合いの点数（100点満点）。3語順番どおりは100、それ以外は 20＋60×（言えた数÷3）
+// 言えた度合いの点数（10点満点）。3語順番どおりは10、それ以外は 2＋6×（言えた数÷3）
 function wordPoints(count, inOrder) {
   if (count === 3 && inOrder) return POINTS.best;
   return Math.round(POINTS.base + POINTS.range * (count / 3));
@@ -151,9 +151,9 @@ function wordPoints(count, inOrder) {
 // - 最良：3語・順番どおり（余計な語があってもよい）→ 人数＋同数のボーナス
 // - 通常：1語以上 → 人数
 // - ほかの言語で言った：点数は一致した国の言葉で同じ数え方の半分、ファンは人数の半分（切り捨て）。
-//   相手の言語で返せて満点なので、日本語を3語順番どおりに言っても相手が英語なら50点
+//   相手の言語で返せて満点なので、日本語を3語順番どおりに言っても相手が英語なら5点
 // - 気持ち悪がられる：核の語が1つもなく、両親の言葉ではない言葉しか言わない → 0
-// - 無音：何も言わない、聞き取れない、核以外の両親の言葉だけ → 0
+// - 無音：何も言わない、聞き取れない、核以外の両親の言葉だけ → 0点・0ファン（10/25）
 // 余計な語は点数に使わない
 export function score({ count, inOrder, extra, other = null }, audience = AUDIENCE) {
   if (other) {
