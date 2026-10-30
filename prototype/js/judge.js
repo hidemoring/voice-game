@@ -91,15 +91,17 @@ export function judge(transcript, { countryId, plan, age = 1 }) {
   const total = coreKeys(target).length;
 
   // ほかの言語で言った（v3・v4）：言うべき言語の言葉では説明できない語が残り、
-  // 同じ場面のほかの言語の言葉が全部そろって、全体の説明がつくとき（文全体が一致。10/28ユーザー決定）。
+  // 同じ場面のほかの言語の核になる語が全部そろったとき（10/28ユーザー決定）。余計な語は条件にしない（10/30ユーザー決定）。
   // 一部だけ（例：アメリカ生まれが「かわいいね」だけ）は、ほかの言語にしない
+  // 言うべき言葉が全部・順番どおりなら、ほかの言語が混ざっても最良なので見ない（判定の順番。10/30ユーザー決定）
   // パパ／ママ／バイバイのように言語で同じ音の語は、それだけなら言うべき言語の言葉として扱われ、ここには来ない
+  const best = own.found.length === total && own.inOrder;
   let other = null;
-  if (own.extra) {
+  if (own.extra && !best) {
     for (const cand of others) {
       const a = analyze(norm, cand, rk);
       const candTotal = coreKeys(cand).length;
-      if (a.found.length === candTotal && !a.extra && !other) {
+      if (a.found.length === candTotal && !other) {
         other = { lang: cand.lang, found: a.found, inOrder: a.inOrder, total: candTotal };
       }
     }
@@ -185,20 +187,20 @@ function wordPoints(count, total, inOrder) {
   return Math.round(POINTS.base + POINTS.range * (count / total));
 }
 
-// 判定・点数・ファン（仕様書v3・v4）。audience は画面に出ている人数
-// - 最良：全部・順番どおり（余計な語があってもよい）→ 人数＋同数のボーナス
-// - 通常：1語以上 → 人数
+// 判定・点数・ファン（仕様書v3・v4）。audience は画面に出ている人数。上から順に見る（10/30ユーザー決定）
+// - 最良：全部・順番どおり（余計な語・ほかの言語が混ざってもよい）→ 人数＋同数のボーナス
 // - ほかの言語で言った（全部そろったときだけ）：点数は同じ数え方の半分（四捨五入。順番どおり5、順番違い4）、
 //   ファンは人数の半分（切り捨て）。相手の言語で返せて満点なので、日本語を全部順番どおりに言っても相手が英語なら5点
+// - 通常：1語以上 → 人数
 // - 気持ち悪がられる：核の語が1つもなく、言うべき言葉ではない言葉しか言わない → 0点・0
 // - 無音：何も言わない、聞き取れない、核以外の言葉だけ → 0点・0（10/25）
 // 余計な語は点数に使わない
 export function score({ count, total = 3, inOrder, extra, other = null }, audience) {
+  if (count === total && inOrder) return { verdict: 'best', points: POINTS.best, fan: audience, bonusFan: audience };
   if (other) {
     const points = Math.round(wordPoints(other.count, other.total, other.inOrder) * POINTS.otherRatio);
     return { verdict: 'other', points, fan: Math.floor(audience / 2), bonusFan: 0 };
   }
-  if (count === total && inOrder) return { verdict: 'best', points: POINTS.best, fan: audience, bonusFan: audience };
   if (count > 0) return { verdict: 'normal', points: wordPoints(count, total, inOrder), fan: audience, bonusFan: 0 };
   if (extra) return { verdict: 'creepy', points: POINTS.creepy, fan: 0, bonusFan: 0 };
   return { verdict: 'silent', points: POINTS.silent, fan: 0, bonusFan: 0 };

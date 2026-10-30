@@ -63,8 +63,13 @@ const cases1 = [
   // パパ／ママは3言語でほぼ同じ音なので、それだけなら生まれた国の言葉として扱う
   ['アメリカ生まれで「パパ ママ」だけは生まれた国の言葉', 'us', 'A', 'パパ ママ', 'normal', 6, 2, 0],
   ['スペイン生まれで「papa mama」だけは生まれた国の言葉', 'es', 'B', 'papa mama', 'normal', 6, 2, 0],
-  // ほかの言語に余計な語が混ざると「全体が一致」しないので、生まれた国の判定のまま
-  ['アメリカ生まれで日本語＋余計な語は通常', 'us', 'A', 'パパですよ ママですよ かわいいね こんにちは', 'normal', 6, 2, 0],
+  // ほかの言語は余計な語を条件にしない（10/30）
+  ['アメリカ生まれで日本語＋余計な語はほかの言語', 'us', 'A', 'パパですよ ママですよ かわいいね こんにちは', 'other', 5, 1, 0],
+  ['アメリカ生まれで日本語（順番違い）＋余計な語はほかの言語', 'us', 'A', 'ママですよ パパですよ かわいいね おはよう', 'other', 4, 1, 0],
+  // 判定の順番は 最良 → ほかの言語 → 通常（10/30）。言うべき言葉が全部・順番どおりなら、ほかの言語が混ざっても最良
+  ['アメリカ生まれで英語の前に日本語の文は最良', 'us', 'A', 'パパですよ ママですよ かわいいね イッツパパ イッツママ ユアソーキュート', 'best', 10, 2, 2],
+  ['アメリカ生まれで英語の後に日本語の文は最良', 'us', 'A', 'イッツパパ イッツママ ユアソーキュート パパですよ ママですよ かわいいね', 'best', 10, 2, 2],
+  ['アメリカ生まれで英語の途中に日本語の文は最良', 'us', 'A', 'イッツパパ パパですよ ママですよ かわいいね イッツママ ユアソーキュート', 'best', 10, 2, 2],
 ];
 for (const [name, countryId, plan, transcript, verdict, points, fan, bonusFan] of cases1) {
   test(`1歳・${name}`, () => {
@@ -138,6 +143,27 @@ const cases = [
   ['6歳・スペイン生まれがスペイン語で言う（ほかの言語）', 6, 'es', 'A', 'オラ ムーチョグスト', 'other', 5, 2, 0],
   ['6歳・無音', 6, 'us', 'B', '', 'silent', 0, 0, 0],
   ['6歳・違う言葉', 6, 'jp', 'B', 'good morning', 'creepy', 0, 0, 0],
+  // ほかの言語のセリフ全部＋余計な語 → ほかの言語（10/30。余計な語は条件にしない）
+  ['2歳・アメリカ生まれで日本語＋余計な語（ほかの言語）', 2, 'us', 'A', 'おいしいね ごはん', 'other', 5, 1, 0],
+  ['4歳・アメリカ生まれで日本語の2語＋余計な語（ほかの言語）', 4, 'us', 'A', 'バイバイ またね げんきでね', 'other', 5, 1, 0],
+  ['5歳・日本生まれで英語＋余計な語（ほかの言語）', 5, 'jp', 'B', 'Hello! Nice to meet you! I am Ken', 'other', 5, 2, 0],
+  ['6歳・アメリカ生まれが英語＋余計な語（Plan B。ほかの言語）', 6, 'us', 'B', 'Hello, nice to meet you, teacher', 'other', 5, 2, 0],
+  // 言うべき言葉を全部・順番どおり＋ほかの言語のセリフ全部（前・後・途中）→ 最良（10/30。判定の順番）
+  ['5歳・アメリカ生まれで英語の後に日本語（最良）', 5, 'us', 'A', 'ハロー ナイストゥミーチュー はじめまして こんにちは', 'best', 10, 5, 5],
+  ['5歳・アメリカ生まれで英語の前に日本語（最良）', 5, 'us', 'A', 'はじめまして こんにちは ハロー ナイストゥミーチュー', 'best', 10, 5, 5],
+  ['5歳・アメリカ生まれで英語の途中に日本語（最良）', 5, 'us', 'A', 'ハロー はじめまして こんにちは ナイストゥミーチュー', 'best', 10, 5, 5],
+  ['4歳・日本生まれで日本語の後に英語（最良）', 4, 'jp', 'A', 'バイバイ またね バイバイ シーユー', 'best', 10, 3, 3],
+  ['4歳・日本生まれで日本語の前に英語（最良）', 4, 'jp', 'A', 'バイバイ シーユー バイバイ またね', 'best', 10, 3, 3],
+  ['4歳・日本生まれで日本語の途中に英語（最良）', 4, 'jp', 'A', 'バイバイ バイバイ シーユー またね', 'best', 10, 3, 3],
+  ['2歳・スペイン生まれでスペイン語の後に日本語（最良）', 2, 'es', 'A', 'ケリコ おいしいね', 'best', 10, 2, 2],
+  ['3歳・日本生まれで日本語の前に英語（最良）', 3, 'jp', 'A', 'サンキュー ありがとう', 'best', 10, 3, 3],
+  ['6歳・アメリカ生まれでスペイン語の後に英語（Plan B。最良）', 6, 'us', 'B', 'Hola, mucho gusto. Hello, nice to meet you', 'best', 10, 4, 4],
+  ['6歳・アメリカ生まれでスペイン語の前に英語（Plan B。最良）', 6, 'us', 'B', 'Hello, nice to meet you. Hola, mucho gusto', 'best', 10, 4, 4],
+  ['6歳・アメリカ生まれでスペイン語の途中に英語（Plan B。最良）', 6, 'us', 'B', 'Hola, hello, nice to meet you, mucho gusto', 'best', 10, 4, 4],
+  // 言うべき言葉が順番違い＋ほかの言語のセリフ全部 → ほかの言語（最良でなければ、ほかの言語が先）
+  ['5歳・アメリカ生まれで英語の順番違い＋日本語（ほかの言語）', 5, 'us', 'A', 'ナイストゥミーチュー ハロー はじめまして こんにちは', 'other', 5, 2, 0],
+  // 言うべき言葉が一部だけ＋ほかの言語のセリフ全部 → ほかの言語（今と同じ）
+  ['5歳・アメリカ生まれで英語の一部＋日本語（ほかの言語）', 5, 'us', 'A', 'ハロー はじめまして こんにちは', 'other', 5, 2, 0],
 ];
 for (const [name, age, countryId, plan, transcript, verdict, points, fan, bonusFan] of cases) {
   test(name, () => {
@@ -160,6 +186,19 @@ test('場面ごとの人数と、言うべき言語（6歳は授業の言語）'
   assert.equal(recogLang('A', COUNTRIES.us, 6), 'ja-JP');
 });
 
+test('2〜5歳の反応の声は場面ごと（3言語×4つの反応）。反応する人は祖母・近所のおばあさん・いとこ・先生', () => {
+  const kinds = ['surprised', 'happy', 'puzzled', 'creeped'];
+  for (const s of SCENES.slice(1, 5)) {
+    for (const lang of ['ja-JP', 'en-US', 'es-ES']) {
+      for (const k of kinds) assert.ok(s.reactions[lang][k], `${s.age}歳 ${lang} ${k}`);
+    }
+  }
+  assert.deepEqual(SCENES.slice(1, 5).map((s) => s.reactor), ['grandma', 'ngrandma', 'cousin', 'teacher']);
+  assert.equal(SCENES[4].reactions['ja-JP'].surprised, 'まあ！ 上手にあいさつできたね！');
+  // 1歳は両親の文言のまま（場面に reactions を持たない）
+  assert.equal(SCENES[0].reactions, undefined);
+});
+
 test('全部最良なら6歳までの合計は38 Fans', () => {
   const total = SCENES.reduce((sum, s) => sum + s.people.length * 2, 0);
   assert.equal(total, 38);
@@ -180,6 +219,8 @@ test('judge: ほかの言語で言ったときは、どの言語と一致した�
   assert.equal(r.other.lang, 'ja-JP');
   assert.deepEqual(r.other.found, ['papa', 'mama', 'cute']);
   assert.equal(judge('パパ ママ', { countryId: 'us', plan: 'A' }).other, null);
+  // 最良のときは、ほかの言語が混ざっていても返さない（記録の otherLang は空）
+  assert.equal(judge('ハロー ナイストゥミーチュー はじめまして こんにちは', { countryId: 'us', plan: 'A', age: 5 }).other, null);
 });
 
 test('score: 判定ごとの点数とファン（人数2）', () => {
@@ -198,6 +239,15 @@ test('score: 判定ごとの点数とファン（人数2）', () => {
   assert.deepEqual(
     s({ count: 0, inOrder: true, extra: true, other: { count: 3, total: 3, inOrder: false } }),
     { verdict: 'other', points: 4, fan: 1, bonusFan: 0 },
+  );
+  // 判定の順番は 最良 → ほかの言語 → 通常（10/30）
+  assert.deepEqual(
+    s({ count: 3, inOrder: true, extra: true, other: { count: 3, total: 3, inOrder: true } }),
+    { verdict: 'best', points: 10, fan: 2, bonusFan: 2 },
+  );
+  assert.deepEqual(
+    s({ count: 3, inOrder: false, extra: true, other: { count: 3, total: 3, inOrder: true } }),
+    { verdict: 'other', points: 5, fan: 1, bonusFan: 0 },
   );
 });
 

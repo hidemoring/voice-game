@@ -4,7 +4,7 @@
 
 // ビルド番号。タイトル画面・⚙・記録に出す。端末が古いコードを使っていないか見分けるため、
 // prototype を直して push するたびに上げる（GitHub Pages は10分間キャッシュされる）
-export const BUILD = '20261027-18';
+export const BUILD = '20261030-19';
 
 // 公開の開閉。false にして push すると、タイトルが「ただいま準備中」になり、
 // 合言葉を入れた人だけ先に進める（一度入れた端末は記憶する）。
@@ -62,7 +62,7 @@ export const COUNTRIES = {
     name: '日本',
     lang: 'ja-JP',
     colors: { skin: '#f3c9a0', hair: '#222222', papa: '#2b5fb3', mama: '#d64a6a' },
-    // 反応の声（仮。読み上げで代用）。1〜5歳はこの国の言語で話す人が使う
+    // 反応の声（仮。読み上げで代用）。1歳の両親が使う（2〜6歳は場面ごとの reactions）
     reactions: {
       surprised: 'えっ！？ しゃべった！ すごい！',
       happy: 'わあ、しゃべった！',
@@ -290,6 +290,8 @@ const TEACHER_REACTIONS = {
 // langOf: その場面で言うべき言語（6歳だけ授業の言語）
 // beat(round, lang): 繰り返しのあいだの動作。before は手本の前、after は手本のあとに会話窓へ出す。anim は絵の動き
 // ending: 5回繰り返して押されなかったときの終わり方（会話窓の文か、話す人のセリフ）
+// reactions: 反応の声（言語ごと。仮・英語とスペイン語はネイティブ未確認）。ない場面（1歳）は COUNTRIES の reactions
+// reactor: 反応する人。その人の声（app.js の VOICES）で読む。ない場面（1歳・6歳）は既定の高さ
 // results: 判定ごとの結果テキスト（1歳はv8の例文、2〜6歳はすべて仮）
 export const SCENES = [
   {
@@ -324,6 +326,13 @@ export const SCENES = [
     lines: AGE2,
     beat: () => ({ before: '（モグモグモグ）', anim: { id: 'grandma', cls: 'chew' } }),
     ending: { text: '（おばあちゃんは食べ終わった）' },
+    // 「通常」は1語の場面なので出ないが、データとして入れておく
+    reactor: 'grandma',
+    reactions: {
+      'ja-JP': { surprised: 'あらまあ！ 上手に言えたねえ！', happy: 'そうそう、おいしいねえ', puzzled: 'おや？', creeped: '……あらまあ' },
+      'en-US': { surprised: 'Oh my! You said it!', happy: "That's right. Yummy!", puzzled: 'Hmm?', creeped: '...Oh dear.' },
+      'es-ES': { surprised: '¡Ay, qué bien! ¡Lo has dicho!', happy: '¡Eso es, qué rico!', puzzled: '¿Mmm?', creeped: '...Ay, ay, ay.' },
+    },
     results: {
       best: 'おばあちゃんは目を丸くした。「今、おいしいって言った！」その日の食卓は、いつもより長く続いた。',
       normal: 'おばあちゃんは目を丸くした。「今、おいしいって言った！」その日の食卓は、いつもより長く続いた。',
@@ -347,6 +356,13 @@ export const SCENES = [
       ? { before: '（おばあさんが飴を手渡す）', anim: { id: 'ngrandma', cls: 'hand' }, candy: round + 1 }
       : { before: '（おじいさんが飴を手渡す）', anim: { id: 'grandpa', cls: 'hand' }, candy: round + 1 }),
     ending: { text: '（2人の飴がなくなった）' },
+    // 反応するのは近所のおばあさん（手本を言う母ではない）。「通常」は出ないが、データとして入れておく
+    reactor: 'ngrandma',
+    reactions: {
+      'ja-JP': { surprised: 'まあ！ ちゃんとお礼が言えるのね！', happy: 'どういたしまして', puzzled: 'おや？', creeped: '……おやおや' },
+      'en-US': { surprised: 'Oh! Such good manners!', happy: "You're welcome!", puzzled: 'Hmm?', creeped: '...Oh my.' },
+      'es-ES': { surprised: '¡Ay, qué bien! ¡Qué educación!', happy: '¡De nada!', puzzled: '¿Mmm?', creeped: '...Vaya, vaya.' },
+    },
     results: {
       best: 'おばあさんとおじいさんは大喜びで、飴をもうひと袋ずつくれた。あなたは近所で「ありがとうが言える子」と評判になった。',
       normal: 'おばあさんとおじいさんは大喜びで、飴をもうひと袋ずつくれた。あなたは近所で「ありがとうが言える子」と評判になった。',
@@ -368,6 +384,12 @@ export const SCENES = [
     lines: AGE4,
     beat: (round) => ({ before: '（いとこが一歩歩いて、振り返る）', anim: { id: 'cousin', cls: 'step', round } }),
     ending: { text: '（いとこは去って行った）' },
+    reactor: 'cousin',
+    reactions: {
+      'ja-JP': { surprised: 'やったー！ またね！', happy: 'うん、またね！', puzzled: 'え？', creeped: '……こわい' },
+      'en-US': { surprised: 'Yay! See you!', happy: 'Yeah, see you!', puzzled: 'Huh?', creeped: '...Scary.' },
+      'es-ES': { surprised: '¡Bien! ¡Hasta luego!', happy: '¡Sí, adiós!', puzzled: '¿Eh?', creeped: '...Qué miedo.' },
+    },
     results: {
       best: 'いとこは走って戻ってきて、あなたを抱きしめた。「すぐまた来るからね！」',
       normal: 'いとこはうれしそうに、見えなくなるまで手を振り続けた。',
@@ -396,6 +418,12 @@ export const SCENES = [
         'en-US': "That's okay. Let's take it slow.",
         'es-ES': 'No pasa nada. Poco a poco.',
       },
+    },
+    reactor: 'teacher',
+    reactions: {
+      'ja-JP': { surprised: 'まあ！ 上手にあいさつできたね！', happy: 'はい、よろしくね', puzzled: 'あら？', creeped: '……あらあら' },
+      'en-US': { surprised: 'Wow! What a great hello!', happy: 'Nice to meet you, too!', puzzled: 'Oh?', creeped: '...Oh, my.' },
+      'es-ES': { surprised: '¡Qué bien! ¡Muy bien dicho!', happy: '¡Mucho gusto!', puzzled: '¿Eh?', creeped: '...Vaya.' },
     },
     results: {
       best: '先生はしゃがんだまま固まり、それから満面の笑みになった。「みんな、今の聞いた？」あなたは初日から人気者になった。',

@@ -412,7 +412,7 @@ function addLine(text, cls) {
   p.textContent = text;
   $('#result-lines').appendChild(p);
 }
-// 反応の声：その場面で話す人の言語の国のもの。6歳は先生の言葉
+// 反応の声：場面ごとの言葉（2〜6歳）。1歳は両親の言語の国のもの
 function reactionVoice(scene, lang, kind) {
   const set = (scene.reactions && scene.reactions[lang]) || COUNTRIES[COUNTRY_OF_LANG[lang]].reactions;
   return set[kind];
@@ -450,7 +450,8 @@ async function showResult(result, { auto = false } = {}) {
   const voice = reactionVoice(scene, lang, reaction);
   setDialogue(voice);
   speech.playReaction(reaction);
-  if (canSpeak(lang)) speech.speak(voice, lang, { pitch: 1.2, rate: 1 });
+  // 2〜5歳は反応する人の声で読む（10/30）。1歳・6歳は今までどおり
+  if (canSpeak(lang)) speech.speak(voice, lang, VOICES[scene.reactor] || { pitch: 1.2, rate: 1 });
   await wait(1400);
 
   addLine(text);
