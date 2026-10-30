@@ -1,7 +1,7 @@
 // 認識結果の正規化・語の照合・順番・余計な語・採点。
 // ブラウザに依存しないので node --test で確かめられる（judge.test.js）。
 
-import { COUNTRIES, AUDIENCE, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO, READINGS } from './data.js';
+import { COUNTRIES, SCENES, POINTS, EXTRA_MIN_LENGTH, FUZZY_RATIO, READINGS } from './data.js';
 
 // 長いものから置き換える（「予想9」→「ヨソウキュウ」）
 const READING_KEYS = Object.keys(READINGS).sort((a, b) => b.length - a.length);
@@ -20,13 +20,22 @@ export function normalize(text) {
   return s.replace(DROP, '');
 }
 
-// Plan A は ja-JP 固定、Plan B はその国の言語
+// Plan A は ja-JP 固定、Plan B はその場面で言うべき言語（6歳は授業の言語）
 export function recogKey(plan) {
   return plan === 'B' ? 'native' : 'ja';
 }
-export function recogLang(plan, country) {
-  return plan === 'B' ? country.lang : 'ja-JP';
+export function sceneFor(age) {
+  return SCENES[(age || 1) - 1] || SCENES[0];
 }
+export function sceneLang(scene, country) {
+  return scene.langOf(country);
+}
+export function recogLang(plan, country, age = 1) {
+  return plan === 'B' ? sceneLang(sceneFor(age), country) : 'ja-JP';
+}
+// 1つの手本のセリフに含まれる核になる語（1〜3つ）
+export const keysOf = (phrase) => phrase.keys || [phrase.key];
+export const coreKeys = (lines) => lines.phrases.flatMap(keysOf);
 
 // text の中で pattern に最も近い部分を探し、文字違いの数と位置を返す（近似部分文字列照合）
 export function approxFind(text, pattern) {
@@ -62,32 +71,56 @@ export function approxFind(text, pattern) {
   return { distance: prev[end], start: prevStart[end], end };
 }
 
-export function judge(transcript, { countryId, plan, audience = AUDIENCE }) {
+// 場面と国から、言うべき言葉（target）と、ほかの言語の言葉（others）を取り出す
+export function targetsFor(countryId, age = 1) {
+  const country = COUNTRIES[countryId];
+  const scene = sceneFor(age);
+  const lang = sceneLang(scene, country);
+  const target = { lang, ...scene.lines[lang] };
+  const others = Object.entries(scene.lines)
+    .filter(([l]) => l !== lang)
+    .map(([l, lines]) => ({ lang: l, ...lines }));
+  return { scene, lang, target, others, audience: scene.people.length };
+}
+
+export function judge(transcript, { countryId, plan, age = 1 }) {
   const rk = recogKey(plan);
   const norm = normalize(transcript);
-  const own = analyze(norm, COUNTRIES[countryId], rk);
+  const { scene, target, others, audience } = targetsFor(countryId, age);
+  const own = analyze(norm, target, rk);
+  const total = coreKeys(target).length;
 
-  // ほかの言語で言った（v3）：生まれた国の言葉では説明できない語が残り、
-  // ほかの国の両親の言葉なら1語以上見つかって全体の説明がつくとき。
-  // パパ／ママは3言語でほぼ同じ音なので、それだけなら生まれた国の言葉では説明が残らず、ここには来ない
+  // ほかの言語で言った（v3・v4）：言うべき言語の言葉では説明できない語が残り、
+  // 同じ場面のほかの言語の言葉が全部そろって、全体の説明がつくとき（文全体が一致。10/28ユーザー決定）。
+  // 一部だけ（例：アメリカ生まれが「かわいいね」だけ）は、ほかの言語にしない
+  // パパ／ママ／バイバイのように言語で同じ音の語は、それだけなら言うべき言語の言葉として扱われ、ここには来ない
   let other = null;
   if (own.extra) {
-    for (const c of Object.values(COUNTRIES)) {
-      if (c.id === countryId) continue;
-      const a = analyze(norm, c, rk);
-      if (a.found.length > 0 && !a.extra && (!other || a.found.length > other.found.length)) {
-        other = { countryId: c.id, lang: c.lang, found: a.found, inOrder: a.inOrder };
+    for (const cand of others) {
+      const a = analyze(norm, cand, rk);
+      const candTotal = coreKeys(cand).length;
+      if (a.found.length === candTotal && !a.extra && !other) {
+        other = { lang: cand.lang, found: a.found, inOrder: a.inOrder, total: candTotal };
       }
     }
   }
 
   const { verdict, points, fan, bonusFan } = score(
-    { count: own.found.length, inOrder: own.inOrder, extra: own.extra, other: other && { count: other.found.length, inOrder: other.inOrder } },
+    {
+      count: own.found.length,
+      total,
+      inOrder: own.inOrder,
+      extra: own.extra,
+      other: other && { count: other.found.length, total: other.total, inOrder: other.inOrder },
+    },
     audience,
   );
   return {
     transcript: transcript || '',
     normalized: norm,
+    age: scene.age,
+    lang: target.lang,
+    total,
     found: own.found,
     positions: own.positions,
     inOrder: own.inOrder,
@@ -98,40 +131,45 @@ export function judge(transcript, { countryId, plan, audience = AUDIENCE }) {
     points,
     fan,
     bonusFan,
+    byRole: fanByRole(scene.people, fan, bonusFan),
   };
 }
 
-// 1つの国の両親の言葉と照合する：見つかった語、順番、余計な語
-function analyze(norm, country, rk) {
-  const keys = country.phrases.map((p) => p.key);
-
-  // 核になる語の位置。核そのものが含まれるか、言葉全体が近ければ「言った」とする
+// 1つの言語の言葉と照合する：見つかった語、順番、余計な語
+function analyze(norm, lines, rk) {
+  const keys = coreKeys(lines);
   const positions = {};
+  for (const k of keys) positions[k] = -1;
   const regions = [];
-  for (const p of country.phrases) {
-    let pos = -1;
-    for (const v of country.variants[rk][p.key]) {
-      const nv = normalize(v);
-      if (!nv) continue;
-      const i = norm.indexOf(nv);
-      if (i >= 0 && (pos < 0 || i < pos)) pos = i;
+  for (const p of lines.phrases) {
+    // 核になる語そのもの
+    for (const k of keysOf(p)) {
+      for (const v of lines.variants[rk][k] || []) {
+        const nv = normalize(v);
+        if (!nv) continue;
+        const i = norm.indexOf(nv);
+        if (i >= 0 && (positions[k] < 0 || i < positions[k])) positions[k] = i;
+      }
     }
+    // 言葉全体の近似照合（核の語が崩れていても拾う）。
+    // 核が2つ以上あるセリフ（4〜6歳）は、片方だけ言っても全体に近いと出てしまうので、
+    // 近似照合は余計な語の判定にだけ使い、核の語は表記ゆれで拾う
     const expected = normalize(rk === 'ja' ? p.ja || p.text : p.text);
     const m = approxFind(norm, expected);
     if (m && m.end > m.start && m.distance <= Math.floor(expected.length / FUZZY_RATIO)) {
-      if (pos < 0) pos = m.start;
+      const ks = keysOf(p);
+      if (ks.length === 1 && positions[ks[0]] < 0) positions[ks[0]] = m.start;
       regions.push(m);
     }
-    positions[p.key] = pos;
   }
   const found = keys.filter((k) => positions[k] >= 0);
-  const inOrder = found.every((k, i) => i === 0 || positions[found[i - 1]] < positions[k]);
+  const inOrder = found.every((k, i) => i === 0 || positions[found[i - 1]] <= positions[k]);
 
-  // 余計な語：近似照合で拾った部分と、両親の言葉に含まれる語を取り除き、残りを見る
+  // 余計な語：近似照合で拾った部分と、言葉に含まれる語を取り除き、残りを見る
   const chars = norm.split('');
   for (const r of regions) for (let i = r.start; i < r.end; i++) chars[i] = ' ';
   let rest = chars.join('');
-  const strip = [...keys.flatMap((k) => country.variants[rk][k]), ...country.fillers[rk]]
+  const strip = [...keys.flatMap((k) => lines.variants[rk][k] || []), ...(lines.fillers[rk] || [])]
     .map(normalize)
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
@@ -141,27 +179,39 @@ function analyze(norm, country, rk) {
   return { found, positions, inOrder, extra, rest: fragments.join('/') };
 }
 
-// 言えた度合いの点数（10点満点）。3語順番どおりは10、それ以外は 2＋6×（言えた数÷3）
-function wordPoints(count, inOrder) {
-  if (count === 3 && inOrder) return POINTS.best;
-  return Math.round(POINTS.base + POINTS.range * (count / 3));
+// 言えた度合いの点数（10点満点）。全部・順番どおりは10、それ以外は 2＋6×（言えた数÷核になる語の数）
+function wordPoints(count, total, inOrder) {
+  if (count === total && inOrder) return POINTS.best;
+  return Math.round(POINTS.base + POINTS.range * (count / total));
 }
 
-// 判定・点数・ファン（仕様書v3）。audience は画面に出ている人数
-// - 最良：3語・順番どおり（余計な語があってもよい）→ 人数＋同数のボーナス
+// 判定・点数・ファン（仕様書v3・v4）。audience は画面に出ている人数
+// - 最良：全部・順番どおり（余計な語があってもよい）→ 人数＋同数のボーナス
 // - 通常：1語以上 → 人数
-// - ほかの言語で言った：点数は一致した国の言葉で同じ数え方の半分、ファンは人数の半分（切り捨て）。
-//   相手の言語で返せて満点なので、日本語を3語順番どおりに言っても相手が英語なら5点
-// - 気持ち悪がられる：核の語が1つもなく、両親の言葉ではない言葉しか言わない → 0
-// - 無音：何も言わない、聞き取れない、核以外の両親の言葉だけ → 0点・0ファン（10/25）
+// - ほかの言語で言った（全部そろったときだけ）：点数は同じ数え方の半分（四捨五入。順番どおり5、順番違い4）、
+//   ファンは人数の半分（切り捨て）。相手の言語で返せて満点なので、日本語を全部順番どおりに言っても相手が英語なら5点
+// - 気持ち悪がられる：核の語が1つもなく、言うべき言葉ではない言葉しか言わない → 0点・0
+// - 無音：何も言わない、聞き取れない、核以外の言葉だけ → 0点・0（10/25）
 // 余計な語は点数に使わない
-export function score({ count, inOrder, extra, other = null }, audience = AUDIENCE) {
+export function score({ count, total = 3, inOrder, extra, other = null }, audience) {
   if (other) {
-    const points = Math.round(wordPoints(other.count, other.inOrder) * POINTS.otherRatio);
+    const points = Math.round(wordPoints(other.count, other.total, other.inOrder) * POINTS.otherRatio);
     return { verdict: 'other', points, fan: Math.floor(audience / 2), bonusFan: 0 };
   }
-  if (count === 3 && inOrder) return { verdict: 'best', points: POINTS.best, fan: audience, bonusFan: audience };
-  if (count > 0) return { verdict: 'normal', points: wordPoints(count, inOrder), fan: audience, bonusFan: 0 };
+  if (count === total && inOrder) return { verdict: 'best', points: POINTS.best, fan: audience, bonusFan: audience };
+  if (count > 0) return { verdict: 'normal', points: wordPoints(count, total, inOrder), fan: audience, bonusFan: 0 };
   if (extra) return { verdict: 'creepy', points: POINTS.creepy, fan: 0, bonusFan: 0 };
   return { verdict: 'silent', points: POINTS.silent, fan: 0, bonusFan: 0 };
+}
+
+// ファンの分類ごとの内訳。画面の人を左から fan 人ぶん数え、ボーナスも同じ人に付く
+// （3歳でほかの言語＝1人なら、左端の近所のおばあさんが数えられる）
+export function fanByRole(people, fan, bonusFan) {
+  const by = {};
+  const each = fan > 0 ? bonusFan / fan : 0;
+  people.slice(0, fan).forEach((p) => {
+    by[p.role] = (by[p.role] || 0) + 1 + each;
+  });
+  for (const r of Object.keys(by)) by[r] = Math.round(by[r]);
+  return by;
 }

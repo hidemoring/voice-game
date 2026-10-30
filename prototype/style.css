@@ -127,7 +127,7 @@ html, body {
 /* 1歳 */
 .status { display: flex; justify-content: space-between; font-size: 15px; padding: 8px 14px; }
 .stage { display: flex; flex-direction: column; gap: 10px; }
-.parents {
+.people {
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -135,34 +135,34 @@ html, body {
   min-height: 150px;
   padding: 30px 0 6px;
 }
-.parent { position: relative; display: flex; flex-direction: column; align-items: center; }
-.parent .sprite svg { display: block; }
-.parent .mark {
+.person { position: relative; display: flex; flex-direction: column; align-items: center; }
+.person .sprite svg { display: block; }
+.person .mark {
   position: absolute;
   top: -30px;
   font-size: 24px;
   color: var(--accent);
   opacity: 0;
 }
-.parent.talking .sprite { animation: talk .5s steps(2) infinite; }
+.person.talking .sprite { animation: talk .5s steps(2) infinite; }
 @keyframes talk { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
 
-.parents.reaction-surprised .sprite { animation: jump .5s ease-out 3; }
+.people.reaction-surprised .sprite { animation: jump .5s ease-out 3; }
 @keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
-.parents.reaction-happy .sprite { animation: bounce .4s ease-in-out 4; }
+.people.reaction-happy .sprite { animation: bounce .4s ease-in-out 4; }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-.parents.reaction-puzzled .sprite { animation: tilt 1.2s ease-in-out 2; transform-origin: 50% 90%; }
+.people.reaction-puzzled .sprite { animation: tilt 1.2s ease-in-out 2; transform-origin: 50% 90%; }
 @keyframes tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(12deg); } }
-.parents.reaction-creeped .sprite { animation: shiver .15s linear 8; filter: saturate(.3); }
+.people.reaction-creeped .sprite { animation: shiver .15s linear 8; filter: saturate(.3); }
 @keyframes shiver { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
-.parents[class*="reaction-"] .mark { opacity: 1; animation: pop .3s ease-out; }
+.people[class*="reaction-"] .mark { opacity: 1; animation: pop .3s ease-out; }
 @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
 
 .dialogue { min-height: 60px; font-size: 18px; }
 .mode-talk, .mode-input, .mode-result { display: none; }
-#screen-age1[data-mode="talk"] .mode-talk { display: block; }
-#screen-age1[data-mode="input"] .mode-input { display: block; }
-#screen-age1[data-mode="result"] .mode-result { display: block; }
+#screen-scene[data-mode="talk"] .mode-talk { display: block; }
+#screen-scene[data-mode="input"] .mode-input { display: block; }
+#screen-scene[data-mode="result"] .mode-result { display: block; }
 .situation { margin: 0 0 10px; }
 
 .bar { height: 14px; border: 2px solid var(--fg); margin: 8px 0 4px; }
@@ -222,3 +222,28 @@ html, body {
 }
 .overlay textarea { height: 140px; white-space: pre; }
 .overlay .btn { font-size: 14px; padding: 6px 10px; }
+
+/* 2〜6歳：人数が増えても1行に収める。子どもとネコは小さめ */
+.people { flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; }
+.person .sprite { transition: transform .4s ease; transform-origin: 50% 100%; }
+.person .badge { font-size: 12px; color: var(--accent); min-height: 16px; margin-top: 2px; }
+.person .badge:empty { display: none; }
+/* 繰り返しのあいだの動作（会話窓の（　）と合わせて絵を少し動かす） */
+.person.anim-chew .sprite { animation: chew .3s ease-in-out 4; }
+@keyframes chew { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.94); } }
+.person.anim-hand .sprite { animation: hand .6s ease-in-out 2; }
+@keyframes hand { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
+.person.anim-turn .sprite { animation: turn .6s ease-in-out 1; }
+@keyframes turn { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-10deg); } }
+.person.anim-look .sprite { animation: look 1.2s ease-in-out 1; }
+@keyframes look { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(6deg); } }
+
+/* まとめ */
+.summary { width: 100%; border-collapse: collapse; font-size: 15px; }
+.summary th, .summary td { border-bottom: 1px dashed #555; padding: 6px 4px; text-align: left; }
+.summary th { color: var(--dim); font-weight: normal; font-size: 13px; }
+.summary td.num { text-align: right; }
+.fan.total { font-size: 20px; color: var(--accent); margin: 12px 0 4px; }
+/* 人数が多い場面（5歳5人・6歳4人）は間を詰めて1列に収める。絵の大きさは sprites.js の pxFor() */
+.people[data-count="4"] { gap: 14px 12px; }
+.people[data-count="5"] { gap: 14px 8px; }

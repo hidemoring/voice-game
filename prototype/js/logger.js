@@ -3,7 +3,7 @@
 const LOG_KEY = 'voiceGame.logs';
 const SETTINGS_KEY = 'voiceGame.settings';
 const UNLOCK_KEY = 'voiceGame.unlocked';
-const DEFAULT_SETTINGS = { country: 'random', plan: 'A', tester: '', seconds: 6, showRaw: true, textInput: false };
+const DEFAULT_SETTINGS = { country: 'random', startAge: 1, plan: 'A', tester: '', seconds: 6, showRaw: true, textInput: false };
 
 function read(key, fallback) {
   try {
@@ -52,7 +52,8 @@ export function clearLogs() {
 }
 
 export const TSV_COLUMNS = [
-  'time', 'build', 'tester', 'country', 'lang', 'plan', 'recogLang', 'method', 'seconds', 'browser',
+  // method: mic／text／none（押されずに終わった）
+  'time', 'build', 'tester', 'country', 'age', 'lang', 'plan', 'recogLang', 'method', 'seconds', 'browser',
   'transcript', 'alternatives', 'interim', 'found', 'inOrder', 'extra', 'rest', 'verdict', 'points', 'fan', 'bonusFan', 'otherLang',
   'selfReport', 'usedInterim', 'error', 'durationMs', 'ua',
 ];

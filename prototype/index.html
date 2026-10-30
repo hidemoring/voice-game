@@ -42,20 +42,17 @@
   <button class="btn big" id="btn-arrow">矢を放つ</button>
 </section>
 
-<!-- 誕生 -->
+<!-- 誕生／◯歳になりました -->
 <section class="screen" id="screen-birth">
   <div class="window big-text" id="birth-text"></div>
   <button class="btn big" id="btn-birth-next">▼ つぎへ</button>
 </section>
 
-<!-- 1歳（会話・入力・結果を同じ画面で切り替える） -->
-<section class="screen" id="screen-age1" data-mode="talk">
-  <div class="window status"><span>1歳</span><span>イベント 1／20</span></div>
+<!-- 場面（1〜6歳。会話・入力・結果を同じ画面で切り替える） -->
+<section class="screen" id="screen-scene" data-mode="talk">
+  <div class="window status"><span id="status-age">1歳</span><span id="status-event">イベント 1／20</span></div>
   <div class="stage">
-    <div class="parents" id="parents">
-      <div class="parent" id="parent-papa"><span class="mark"></span><div class="sprite"></div></div>
-      <div class="parent" id="parent-mama"><span class="mark"></span><div class="sprite"></div></div>
-    </div>
+    <div class="people" id="people"></div>
     <div class="window dialogue" id="dialogue">　</div>
   </div>
   <div class="window bottom">
@@ -89,11 +86,26 @@
       </div>
       <div id="after-buttons" hidden>
         <p class="small" id="saved-note"></p>
-        <button class="btn big" id="btn-again">もう一度（別の人生）</button>
-        <button class="btn" id="btn-title">タイトルへ</button>
+        <button class="btn big" id="btn-next">▼ 次へ</button>
+        <button class="btn" id="btn-title">リタイヤしてタイトルに戻る</button>
       </div>
     </div>
   </div>
+</section>
+
+<!-- まとめ（6歳のあと） -->
+<section class="screen" id="screen-summary">
+  <div class="window status"><span>まとめ</span><span id="summary-country"></span></div>
+  <div class="window">
+    <table class="summary" id="summary-table">
+      <thead><tr><th>年齢</th><th>判定</th><th>点数</th><th>Fans</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="fan total" id="summary-total"></p>
+    <p class="small" id="summary-roles"></p>
+  </div>
+  <button class="btn big" id="btn-summary-again">もう一度（別の国で）</button>
+  <button class="btn" id="btn-summary-title">タイトルへ</button>
 </section>
 
 <!-- デバッグ設定（本番では消す） -->
@@ -111,9 +123,21 @@
         </select>
       </label>
     </div>
+    <div class="row">
+      <label>年齢を選んで始める（誕生のあと、この年齢から）<br>
+        <select id="dbg-start-age">
+          <option value="1">1歳（最初から）</option>
+          <option value="2">2歳</option>
+          <option value="3">3歳</option>
+          <option value="4">4歳</option>
+          <option value="5">5歳</option>
+          <option value="6">6歳</option>
+        </select>
+      </label>
+    </div>
     <div class="row">認識の方式<br>
       <label><input type="radio" name="dbg-plan" value="A"> Plan A（ja-JP固定。カタカナで照合）</label><br>
-      <label><input type="radio" name="dbg-plan" value="B"> Plan B（その国の言語で認識）</label>
+      <label><input type="radio" name="dbg-plan" value="B"> Plan B（その場面で言う言語で認識）</label>
     </div>
     <div class="row"><label>テスター名<br><input type="text" id="dbg-tester" placeholder="任意"></label></div>
     <div class="row">

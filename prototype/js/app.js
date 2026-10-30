@@ -1,9 +1,12 @@
-// 画面遷移と進行。タイトル → 地球（矢） → 誕生 → 1歳（会話 → 入力 → 結果）
+// 画面遷移と進行。タイトル → 地球（矢） → 誕生 → 1歳 … 6歳（会話 → 入力 → 結果）→ まとめ
 
-import { COUNTRIES, TEXTS, RECORD_SECONDS, REACTION_OF, BUILD, OPEN, PASSPHRASE } from './data.js';
-import { judge, recogLang } from './judge.js';
+import {
+  COUNTRIES, SCENES, TEXTS, RECORD_SECONDS, ROUNDS, END_WAIT_MS, TOTAL_EVENTS,
+  REACTION_OF, BUILD, OPEN, PASSPHRASE, LANG_NAMES, COUNTRY_OF_LANG,
+} from './data.js';
+import { judge, recogLang, sceneFor, sceneLang, coreKeys } from './judge.js';
 import * as speech from './speech.js';
-import { parentSVG } from './sprites.js';
+import { personSVG, pxFor } from './sprites.js';
 import {
   getSettings, saveSettings, getLogs, addLog, clearLogs, toTSV, downloadText, copyText, browserInfo,
   isUnlockedWith, saveUnlock,
@@ -12,6 +15,18 @@ import {
 const $ = (sel) => document.querySelector(sel);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const MARKS = { surprised: '！？', happy: '♪', puzzled: '？', creeped: '…' };
+// 話す人ごとの声の高さ・速さ（仮。場面データ「読み上げの声」）
+const VOICES = {
+  papa: { pitch: 0.7, rate: 0.9 },
+  mama: { pitch: 1.3, rate: 0.9 },
+  both: { pitch: 1.3, rate: 0.9 },
+  mother: { pitch: 1.3, rate: 0.9 },
+  grandma: { pitch: 1.0, rate: 0.75 },
+  ngrandma: { pitch: 1.1, rate: 0.75 },
+  grandpa: { pitch: 0.6, rate: 0.75 },
+  cousin: { pitch: 1.6, rate: 1.0 },
+  teacher: { pitch: 1.2, rate: 0.95 },
+};
 // マイクが使えなかったときの説明（判定せず、会話に戻す）。iPhone は設定の場所が違う
 const MIC_ERRORS = {
   'not-allowed': 'マイクの使用が許可されていません。アドレスバーの左のアイコンからマイクを許可して、もう一度押してください。Claudeアプリ内のブラウザではマイクが使えないので、Chrome本体で開いてください。',
@@ -29,12 +44,24 @@ function micErrorText(error) {
   return (browserInfo().os === 'iOS' ? MIC_ERRORS_IOS : MIC_ERRORS)[error];
 }
 
-const state = { country: null, plan: 'A', loopToken: 0, loopPaused: false, input: null, result: null };
-const LANG_NAMES = { 'ja-JP': '日本語', 'en-US': '英語', 'es-ES': 'スペイン語' };
+const state = {
+  country: null,
+  plan: 'A',
+  age: 1,
+  history: [], // 年齢ごとの結果（まとめ画面用）
+  loopToken: 0,
+  loopPaused: false,
+  round: 0, // 繰り返しの何回目まで進んだか（タブを離れて戻ったときの再開用）
+  input: null,
+  result: null,
+};
 
-// その国の言語の読み上げ声が端末にないときは読まない（既定の声で読むとローマ字読みになる）
-function canSpeak(country) {
-  return speech.hasVoiceFor(country.lang) !== false;
+const currentScene = () => sceneFor(state.age);
+const currentLang = () => sceneLang(currentScene(), state.country);
+
+// その言語の読み上げ声が端末にないときは読まない（既定の声で読むとローマ字読みになる）
+function canSpeak(lang) {
+  return speech.hasVoiceFor(lang) !== false;
 }
 
 // ---- 画面 ----
@@ -43,7 +70,10 @@ function show(name) {
   window.scrollTo(0, 0);
 }
 function setMode(mode) {
-  $('#screen-age1').dataset.mode = mode;
+  $('#screen-scene').dataset.mode = mode;
+}
+function inTalk() {
+  return $('#screen-scene').classList.contains('active') && $('#screen-scene').dataset.mode === 'talk';
 }
 
 // ---- 閉鎖フラグと合言葉 ----
@@ -81,9 +111,15 @@ function initTitle() {
   }
   $('#btn-start').addEventListener('click', () => {
     speech.unlockAudio();
-    resetEarth();
-    show('earth');
+    startLife();
   });
+}
+
+// 1つの人生を始める（地球の画面へ）
+function startLife() {
+  state.history = [];
+  resetEarth();
+  show('earth');
 }
 
 // ---- 地球と矢 ----
@@ -105,91 +141,198 @@ async function shootArrow() {
   $('.globe').classList.add('hit');
   state.country = pickCountry();
   await wait(900);
+  // デバッグ「年齢を選んで始める」：誕生のあと、その年齢から
+  state.age = Math.min(SCENES.length, Math.max(1, Number(getSettings().startAge) || 1));
   $('#birth-text').textContent = TEXTS.born(state.country.name);
   show('birth');
 }
 
-// ---- 1歳：会話 ----
-function startAge1() {
+// ---- 場面：会話 ----
+function startScene(age) {
+  state.age = age;
+  const scene = currentScene();
   const c = state.country;
-  $('#parent-papa .sprite').innerHTML = parentSVG('papa', c.colors);
-  $('#parent-mama .sprite').innerHTML = parentSVG('mama', c.colors);
-  $('#situation').textContent = TEXTS.situation;
-  clearReaction();
+  const lang = currentLang();
+  $('#status-age').textContent = `${age}歳`;
+  $('#status-event').textContent = `イベント ${age}／${TOTAL_EVENTS}`;
+  renderPeople(scene, c);
+  $('#situation').textContent = scene.situation(c);
   $('#result-lines').innerHTML = '';
   $('#raw-info').textContent = '';
   $('#after-buttons').hidden = true;
   $('#self-report').hidden = false;
   $('#btn-mic').disabled = false;
-  $('#btn-mic').textContent = `▶ まねして言う（${recordSeconds()}秒）`;
+  $('#btn-mic').textContent = micLabel();
   const note = $('#voice-note');
-  note.hidden = canSpeak(c);
-  note.textContent = `この端末には${LANG_NAMES[c.lang] || c.lang}の読み上げの声がないため、両親のセリフは字幕だけです。`;
+  note.hidden = canSpeak(lang);
+  note.textContent = `この端末には${LANG_NAMES[lang] || lang}の読み上げの声がないため、セリフは字幕だけです。`;
+  setDialogue('');
   setMode('talk');
-  show('age1');
-  runParentLoop();
+  show('scene');
+  state.round = 0;
+  runSceneLoop();
+}
+function micLabel() {
+  return `▶ ${currentScene().imitate ? 'まねして言う' : '言う'}（${recordSeconds()}秒）`;
 }
 function recordSeconds() {
   return Number(getSettings().seconds) || RECORD_SECONDS;
+}
+function renderPeople(scene, country) {
+  const box = $('#people');
+  box.className = 'people';
+  box.dataset.count = String(scene.people.length);
+  box.innerHTML = '';
+  const px = pxFor(scene.people.length);
+  let kidIndex = 0;
+  for (const p of scene.people) {
+    const el = document.createElement('div');
+    el.className = 'person';
+    el.id = `person-${p.id}`;
+    el.dataset.kind = p.kind;
+    el.innerHTML = `<span class="mark"></span><div class="sprite">${personSVG(p.kind, country.colors, p.kind === 'kid' ? kidIndex++ : 0, px)}</div><div class="badge"></div>`;
+    box.appendChild(el);
+  }
 }
 
 function setDialogue(text) {
   $('#dialogue').textContent = text || '　';
 }
 function highlightSpeaker(who) {
-  $('#parent-papa').classList.toggle('talking', who === 'papa' || who === 'both');
-  $('#parent-mama').classList.toggle('talking', who === 'mama' || who === 'both');
+  document.querySelectorAll('.person').forEach((el) => {
+    const id = el.id.replace('person-', '');
+    el.classList.toggle('talking', who === 'both' ? id === 'papa' || id === 'mama' : id === who);
+  });
 }
-// ボタンを押すまで3語を繰り返す
-async function runParentLoop() {
+// 繰り返しのあいだの動作：絵を少し動かす
+function animate(anim) {
+  if (!anim) return;
+  if (anim.id === 'kids') {
+    document.querySelectorAll('.person[data-kind="kid"] .sprite').forEach((s, i) => {
+      s.style.transform = `translate(${(i % 2 ? 1 : -1) * 2 * (anim.round + 1)}px, ${-2 * (anim.round + 1)}px)`;
+    });
+    return;
+  }
+  const el = $(`#person-${anim.id}`);
+  if (!el) return;
+  if (anim.cls === 'step') {
+    // いとこが一歩ずつ遠ざかる（小さくなる）
+    el.querySelector('.sprite').style.transform = `translateX(${-14 * (anim.round + 1)}px) scale(${1 - 0.12 * (anim.round + 1)})`;
+    el.classList.add('anim-turn');
+    setTimeout(() => el.classList.remove('anim-turn'), 700);
+    return;
+  }
+  el.classList.add(`anim-${anim.cls}`);
+  setTimeout(() => el.classList.remove(`anim-${anim.cls}`), 1300);
+}
+function setBadge(id, text) {
+  const el = $(`#person-${id} .badge`);
+  if (el) el.textContent = text;
+}
+
+// 手本を最大5回繰り返す。5回目のあと3秒待っても押されなければ、場面に合った形で終わって無音の結果へ
+async function runSceneLoop() {
   const token = ++state.loopToken;
   state.loopPaused = false;
-  const c = state.country;
-  const speakable = canSpeak(c);
-  while (token === state.loopToken) {
-    for (const p of c.phrases) {
+  const scene = currentScene();
+  const lang = currentLang();
+  const lines = scene.lines[lang];
+  const speakable = canSpeak(lang);
+  const say = async (text, sayLang, who) => {
+    setDialogue(text);
+    highlightSpeaker(who);
+    if (speakable && canSpeak(sayLang)) await speech.speak(text, sayLang, VOICES[who] || VOICES.teacher);
+    else await wait(1500);
+    highlightSpeaker(null);
+  };
+  if (scene.intro && state.round === 0) {
+    await say(scene.intro.text, scene.intro.lang, scene.intro.speaker);
+    if (token !== state.loopToken) return;
+    await wait(500);
+  }
+  for (let r = state.round; r < ROUNDS; r++) {
+    state.round = r;
+    const beat = scene.beat(r, lang);
+    if (beat && beat.before) {
       if (token !== state.loopToken) return;
-      setDialogue(p.text);
-      highlightSpeaker(p.speaker);
-      if (speakable) await speech.speak(p.text, c.lang, { pitch: p.speaker === 'papa' ? 0.7 : 1.3, rate: 0.9 });
-      else await wait(1500);
-      highlightSpeaker(null);
+      setDialogue(beat.before);
+      animate(beat.anim);
+      await wait(1300);
+    }
+    if (beat && beat.candy) setBadge('mother', `飴×${beat.candy}`);
+    for (const p of lines.phrases) {
+      if (token !== state.loopToken) return;
+      await say(p.text, lang, p.speaker);
       await wait(350);
     }
-    await wait(700);
+    if (beat && beat.after) {
+      if (token !== state.loopToken) return;
+      setDialogue(beat.after);
+      animate(beat.anim);
+      await wait(1300);
+    }
+    await wait(500);
   }
+  state.round = ROUNDS;
+  // 5回目のあと、押されるのを待つ
+  await wait(END_WAIT_MS);
+  if (token !== state.loopToken) return;
+  endWithoutInput();
 }
-function stopParentLoop() {
+function stopSceneLoop() {
   state.loopToken++;
   speech.cancelSpeech();
   highlightSpeaker(null);
 }
-// タブが隠れたら両親の声を止め、戻ったら再開する（裏で鳴り続けないように）
+// 押されずに終わった：場面に合った終わり方 → 無音の結果（自己申告なしで記録）
+async function endWithoutInput() {
+  stopSceneLoop();
+  const scene = currentScene();
+  const lang = currentLang();
+  $('#btn-mic').disabled = true;
+  if (scene.ending.say) {
+    const text = scene.ending.say[lang] || Object.values(scene.ending.say)[0];
+    setDialogue(text);
+    highlightSpeaker(scene.people.find((p) => p.speaker).id);
+    if (canSpeak(lang)) await speech.speak(text, lang, VOICES.teacher);
+    else await wait(1500);
+    highlightSpeaker(null);
+  } else {
+    setDialogue(scene.ending.text);
+    await wait(1500);
+  }
+  const result = judge('', { countryId: state.country.id, plan: state.plan, age: state.age });
+  state.input = {
+    transcript: '', finals: [], interim: '', usedInterim: false, error: null, durationMs: 0,
+    recogLang: recogLang(state.plan, state.country, state.age), method: 'none', seconds: 0,
+  };
+  state.result = result;
+  showResult(result, { auto: true });
+}
+// タブが隠れたら声を止め、戻ったら続きから再開する（裏で鳴り続けないように）
 function initVisibility() {
   document.addEventListener('visibilitychange', () => {
-    const inTalk = $('#screen-age1').classList.contains('active') && $('#screen-age1').dataset.mode === 'talk';
     if (document.hidden) {
       speech.cancelSpeech();
-      if (inTalk) {
-        stopParentLoop();
+      if (inTalk()) {
+        stopSceneLoop();
         state.loopPaused = true;
       }
-    } else if (state.loopPaused && inTalk) {
-      runParentLoop();
+    } else if (state.loopPaused && inTalk()) {
+      runSceneLoop();
     }
   });
   window.addEventListener('pagehide', () => speech.cancelSpeech());
 }
 
-// ---- 1歳：入力 ----
+// ---- 場面：入力 ----
 function setBar(ratio) {
   $('#bar-fill').style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
 }
 async function startInput() {
   const s = getSettings();
-  const c = state.country;
   state.plan = s.plan;
-  stopParentLoop();
+  stopSceneLoop();
   setDialogue('……');
   $('#btn-mic').disabled = true;
   setMode('input');
@@ -205,7 +348,7 @@ async function startInput() {
     return;
   }
 
-  const lang = recogLang(state.plan, c);
+  const lang = recogLang(state.plan, state.country, state.age);
   const seconds = recordSeconds();
   $('#input-phase').textContent = 'マイクを準備中…';
   $('#remain').textContent = seconds.toFixed(1);
@@ -234,36 +377,34 @@ function showMicError(error) {
   $('#mic-error-text').textContent = `${micErrorText(error)}（${error}）`;
   $('#mic-error').hidden = false;
 }
-// 会話に戻る（両親の声のループを再開）
+// 会話に戻る（手本の繰り返しを続きから再開）
 function backToTalk() {
   $('#btn-mic').disabled = false;
   setMode('talk');
-  runParentLoop();
+  runSceneLoop();
 }
 function submitText() {
   const t = $('#text-field').value;
   finishInput(t, {
     transcript: t, finals: [], interim: '', usedInterim: false, error: null, durationMs: 0,
-    recogLang: recogLang(state.plan, state.country), method: 'text', seconds: recordSeconds(),
+    recogLang: recogLang(state.plan, state.country, state.age), method: 'text', seconds: recordSeconds(),
   });
 }
 function finishInput(transcript, raw) {
-  const result = judge(transcript, { countryId: state.country.id, plan: state.plan });
+  const result = judge(transcript, { countryId: state.country.id, plan: state.plan, age: state.age });
   state.input = raw;
   state.result = result;
   showResult(result);
 }
 
-// ---- 1歳：結果 ----
+// ---- 場面：結果 ----
 function clearReaction() {
-  const p = $('#parents');
-  p.className = 'parents';
-  document.querySelectorAll('.parent .mark').forEach((m) => { m.textContent = ''; });
+  $('#people').className = 'people';
+  document.querySelectorAll('.person .mark').forEach((m) => { m.textContent = ''; });
 }
 function setReaction(kind) {
-  const p = $('#parents');
-  p.className = `parents reaction-${kind}`;
-  document.querySelectorAll('.parent .mark').forEach((m) => { m.textContent = MARKS[kind]; });
+  $('#people').className = `people reaction-${kind}`;
+  document.querySelectorAll('.person .mark').forEach((m) => { m.textContent = MARKS[kind]; });
 }
 function addLine(text, cls) {
   const p = document.createElement('p');
@@ -271,17 +412,24 @@ function addLine(text, cls) {
   p.textContent = text;
   $('#result-lines').appendChild(p);
 }
+// 反応の声：その場面で話す人の言語の国のもの。6歳は先生の言葉
+function reactionVoice(scene, lang, kind) {
+  const set = (scene.reactions && scene.reactions[lang]) || COUNTRIES[COUNTRY_OF_LANG[lang]].reactions;
+  return set[kind];
+}
 function rawSummary(result, input) {
-  const c = state.country;
+  const labels = currentScene().lines[result.lang].coreLabels;
+  const fans = `${result.fan} ${TEXTS.fansWord(result.fan)}${result.bonusFan ? `＋${result.bonusFan} Bonus ${TEXTS.fansWord(result.bonusFan)}` : ''}`;
+  const method = { text: 'テキスト', mic: 'マイク', none: '入力なし' }[input.method] || input.method;
   const parts = [
-    `認識（${input.recogLang}／Plan ${state.plan}／${input.method === 'text' ? 'テキスト' : 'マイク'}）: 「${result.transcript}」`,
-    `見つかった語: ${result.found.length ? result.found.map((k) => c.coreLabels[k]).join('、') : 'なし'}`,
-    `順番: ${result.found.length === 3 ? (result.inOrder ? '○' : '×') : '—'}　余計な語: ${result.extra ? `あり（${result.rest}）` : 'なし'}`,
-    `判定: ${TEXTS.verdictLabels[result.verdict]}　${result.points}点　${result.fan} fan${result.bonusFan ? `＋${result.bonusFan} bonus` : ''}`,
+    `認識（${input.recogLang}／Plan ${state.plan}／${method}）: 「${result.transcript}」`,
+    `見つかった語: ${result.found.length ? result.found.map((k) => labels[k]).join('、') : 'なし'}`,
+    `順番: ${result.found.length === result.total && result.total > 1 ? (result.inOrder ? '○' : '×') : '—'}　余計な語: ${result.extra ? `あり（${result.rest}）` : 'なし'}`,
+    `判定: ${TEXTS.verdictLabels[result.verdict]}　${result.points}点　${fans}`,
   ];
   if (result.other) {
-    const oc = COUNTRIES[result.other.countryId];
-    parts.push(`ほかの言語: ${oc.name}の言葉（${result.other.found.map((k) => oc.coreLabels[k]).join('、')}）`);
+    const ol = currentScene().lines[result.other.lang].coreLabels;
+    parts.push(`ほかの言語: ${LANG_NAMES[result.other.lang]}の言葉（${result.other.found.map((k) => ol[k]).join('、')}）`);
   }
   if (input.usedInterim) parts.push('※確定前の認識結果を使用');
   if (input.error) parts.push(`※認識エラー: ${input.error}`);
@@ -289,21 +437,23 @@ function rawSummary(result, input) {
   if (alts.length) parts.push(`他の候補: ${alts.join(' / ')}`);
   return parts.join('\n');
 }
-async function showResult(result) {
-  const c = state.country;
-  const t = TEXTS.results[result.verdict];
+async function showResult(result, { auto = false } = {}) {
+  const scene = currentScene();
+  const lang = currentLang();
+  const text = scene.results[result.verdict] || scene.results.best;
   const reaction = REACTION_OF[result.verdict];
   setMode('result');
   $('#result-lines').innerHTML = '';
 
-  // 両親の反応（絵と声）
+  // 反応（絵と声）
   setReaction(reaction);
-  setDialogue(c.reactions[reaction]);
+  const voice = reactionVoice(scene, lang, reaction);
+  setDialogue(voice);
   speech.playReaction(reaction);
-  if (canSpeak(c)) speech.speak(c.reactions[reaction], c.lang, { pitch: 1.2, rate: 1 });
+  if (canSpeak(lang)) speech.speak(voice, lang, { pitch: 1.2, rate: 1 });
   await wait(1400);
 
-  addLine(t.text);
+  addLine(text);
   await wait(1200);
   addLine(TEXTS.pointsLine(result.points), 'score');
   await wait(800);
@@ -312,22 +462,23 @@ async function showResult(result) {
     await wait(800);
     addLine(TEXTS.bonusLine(result.bonusFan), 'fan');
   }
-  if (t.invite) {
-    await wait(800);
-    addLine(TEXTS.invite, 'invite');
-  }
   await wait(500);
 
   if (getSettings().showRaw) $('#raw-info').textContent = rawSummary(result, state.input);
-  buildSelfReport(c);
+  if (auto) {
+    // 押されずに終わったときは自己申告を出さず、そのまま記録する
+    saveRecord([]);
+  } else {
+    buildSelfReport(scene.lines[lang]);
+  }
 }
 
 // ---- 自己申告と記録 ----
-function buildSelfReport(c) {
+function buildSelfReport(lines) {
   const box = $('#self-report-options');
   box.innerHTML = '';
-  for (const p of c.phrases) {
-    box.insertAdjacentHTML('beforeend', `<label><input type="checkbox" name="said" value="${p.key}"> ${c.coreLabels[p.key]}</label>`);
+  for (const k of coreKeys(lines)) {
+    box.insertAdjacentHTML('beforeend', `<label><input type="checkbox" name="said" value="${k}"> ${lines.coreLabels[k]}</label>`);
   }
   box.insertAdjacentHTML('beforeend', '<label><input type="checkbox" name="said" value="none"> 何も言わなかった</label>');
   // 「何も言わなかった」は他と同時に選べない
@@ -337,20 +488,22 @@ function buildSelfReport(c) {
     if (cb.value === 'none') inputs.forEach((o) => { if (o !== cb) o.checked = false; });
     else box.querySelector('input[value="none"]').checked = false;
   }));
+  $('#self-report').hidden = false;
 }
-function saveRecord() {
+function saveRecord(saidOverride) {
   const s = getSettings();
   const c = state.country;
   const r = state.result;
   const i = state.input;
   const b = browserInfo();
-  const said = [...document.querySelectorAll('#self-report-options input:checked')].map((x) => x.value);
+  const said = saidOverride || [...document.querySelectorAll('#self-report-options input:checked')].map((x) => x.value);
   addLog({
     time: new Date().toISOString(),
     build: BUILD,
     tester: s.tester,
     country: c.id,
-    lang: c.lang,
+    age: state.age,
+    lang: r.lang,
     plan: state.plan,
     recogLang: i.recogLang,
     method: i.method,
@@ -375,9 +528,42 @@ function saveRecord() {
     otherLang: r.other ? r.other.lang : '',
     selfReport: said,
   });
+  state.history.push({ age: state.age, verdict: r.verdict, points: r.points, fan: r.fan, bonusFan: r.bonusFan, byRole: r.byRole });
   $('#self-report').hidden = true;
   $('#after-buttons').hidden = false;
   $('#saved-note').textContent = `記録しました（${getLogs().length}件）`;
+  $('#btn-next').textContent = state.age < SCENES.length ? `▼ ${state.age + 1}歳へ` : '▼ まとめへ';
+}
+// 次の年齢へ（「◯歳になりました」を挟む）。6歳のあとはまとめ
+function goNext() {
+  if (state.age < SCENES.length) {
+    state.age += 1;
+    $('#birth-text').textContent = TEXTS.aged(state.age);
+    show('birth');
+  } else {
+    showSummary();
+  }
+}
+
+// ---- まとめ ----
+function showSummary() {
+  const tbody = $('#summary-table tbody');
+  tbody.innerHTML = '';
+  let total = 0;
+  const roles = {};
+  for (const h of state.history) {
+    const fans = h.fan + h.bonusFan;
+    total += fans;
+    for (const [role, n] of Object.entries(h.byRole)) roles[role] = (roles[role] || 0) + n;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${h.age}歳</td><td>${TEXTS.verdictLabels[h.verdict]}</td><td class="num">${h.points}点</td><td class="num">${h.fan}${h.bonusFan ? `+${h.bonusFan}` : ''}</td>`;
+    tbody.appendChild(tr);
+  }
+  $('#summary-country').textContent = state.country ? `${state.country.name}生まれ` : '';
+  $('#summary-total').textContent = `合計 ${total} ${TEXTS.fansWord(total)}`;
+  const order = ['家族・親戚', '近所', '学校'];
+  $('#summary-roles').textContent = `内訳：${order.filter((r) => roles[r]).map((r) => `${r} ${roles[r]}`).join('／') || 'なし'}`;
+  show('summary');
 }
 
 // ---- デバッグ設定 ----
@@ -387,6 +573,7 @@ function stamp() {
 function refreshDebug() {
   const s = getSettings();
   $('#dbg-country').value = s.country;
+  $('#dbg-start-age').value = String(s.startAge || 1);
   document.querySelector(`input[name="dbg-plan"][value="${s.plan}"]`).checked = true;
   $('#dbg-tester').value = s.tester;
   $('#dbg-seconds').value = String(s.seconds);
@@ -411,13 +598,14 @@ function initDebug() {
   });
   $('#btn-debug-close').addEventListener('click', () => { panel.hidden = true; });
   $('#dbg-country').addEventListener('change', (e) => saveSettings({ country: e.target.value }));
+  $('#dbg-start-age').addEventListener('change', (e) => saveSettings({ startAge: Number(e.target.value) }));
   document.querySelectorAll('input[name="dbg-plan"]').forEach((r) => {
     r.addEventListener('change', (e) => saveSettings({ plan: e.target.value }));
   });
   $('#dbg-tester').addEventListener('input', (e) => saveSettings({ tester: e.target.value.trim() }));
   $('#dbg-seconds').addEventListener('change', (e) => {
     saveSettings({ seconds: Number(e.target.value) });
-    $('#btn-mic').textContent = `▶ まねして言う（${recordSeconds()}秒）`;
+    if (state.country) $('#btn-mic').textContent = micLabel();
   });
   $('#dbg-showraw').addEventListener('change', (e) => saveSettings({ showRaw: e.target.checked }));
   $('#dbg-textinput').addEventListener('change', (e) => saveSettings({ textInput: e.target.checked }));
@@ -445,13 +633,15 @@ function init() {
   initDebug();
   initVisibility();
   $('#btn-arrow').addEventListener('click', shootArrow);
-  $('#btn-birth-next').addEventListener('click', startAge1);
+  $('#btn-birth-next').addEventListener('click', () => { clearReaction(); startScene(state.age); });
   $('#btn-mic').addEventListener('click', startInput);
   $('#btn-text-judge').addEventListener('click', submitText);
   $('#btn-mic-retry').addEventListener('click', backToTalk);
   $('#text-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitText(); });
-  $('#btn-save').addEventListener('click', saveRecord);
-  $('#btn-again').addEventListener('click', () => { resetEarth(); show('earth'); });
-  $('#btn-title').addEventListener('click', () => show('title'));
+  $('#btn-save').addEventListener('click', () => saveRecord());
+  $('#btn-next').addEventListener('click', goNext);
+  $('#btn-title').addEventListener('click', () => { stopSceneLoop(); show('title'); });
+  $('#btn-summary-again').addEventListener('click', startLife);
+  $('#btn-summary-title').addEventListener('click', () => show('title'));
 }
 init();
